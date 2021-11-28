@@ -1,5 +1,5 @@
 import React from 'react';
-import { FuelEntry } from '../pages/api/fuel';
+import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 
 interface Props {
   fuelEntry: FuelEntry;
