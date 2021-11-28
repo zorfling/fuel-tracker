@@ -76,7 +76,7 @@ const FuelList = (props: Props) => {
           .sort((a, b) => {
             switch (sort) {
               case 'distance':
-                return a.distance.radians - b.distance.radians;
+                return a.distance - b.distance;
               case 'price':
               default:
                 return a.price - b.price;
