@@ -4,6 +4,7 @@ import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 interface Props {
   fuelEntry: FuelEntry;
 }
+//oops
 
 export const FuelEntryCard = (props: Props) => {
   const {
