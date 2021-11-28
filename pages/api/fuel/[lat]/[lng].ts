@@ -24,7 +24,7 @@ export default async function handler(
 
   const countryId = 21;
   let geoRegionId = 1;
-  let geoRegionLevel = 2;
+  let geoRegionLevel = 3;
 
   let logArray: string[] = [];
 
@@ -36,6 +36,7 @@ export default async function handler(
 
   const base = process.env.FUEL_API_BASE;
   const token = process.env.FUEL_API_TOKEN;
+  const regionEndpoint = `Subscriber/GetCountryGeographicRegions?countryId=${countryId}`;
   const priceEndpoint = `Price/GetSitesPrices?countryId=${countryId}&geoRegionLevel=${geoRegionLevel}&geoRegionId=${geoRegionId}`;
   const instance = axios.create({
     baseURL: base,
@@ -44,6 +45,8 @@ export default async function handler(
     }
   });
 
+  //   const regions = (await instance.get(regionEndpoint)).data;
+  //   console.log(regions);
   // get fuel types
   // const fuelTypes = await instance.get(
   //   `Subscriber/GetCountryFuelTypes?countryId=${countryId}`
@@ -89,7 +92,10 @@ export default async function handler(
   // console.log(siteDetails);
 
   const dataSet = (Geo as any).createCompactSet(geoData);
-  const geo = new (Geo as any)(dataSet, { sorted: true });
+  const geo = new (Geo as any)(dataSet, {
+    setOptions: { id: 'name', lat: 'lat', lon: 'lng' },
+    sorted: true
+  });
 
   const distanceRadiusKms = 10;
 
@@ -140,5 +146,6 @@ export default async function handler(
     .sort((a: any, b: any) => (a.distance < b.distance ? -1 : 1));
   // .filter(site => site.price < 1500);*/
 
+  //   res.status(200).json({ ...nearbyPrices, log: logArray });
   res.status(200).json(nearbyPrices);
 }
