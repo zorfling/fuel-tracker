@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useQuery } from 'react-query';
-import { FuelEntry } from '../pages/api/fuel';
+import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 import { FuelEntryCard } from './FuelEntry';
 import { useLocation } from './useLocation';
 
