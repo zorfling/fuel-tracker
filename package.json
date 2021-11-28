@@ -10,9 +10,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@turf/distance": "^6.5.0",
     "axios": "^0.24.0",
     "date-fns": "^2.25.0",
-    "geo-distance": "^0.2.0",
     "geo-nearby": "^2.0.1",
     "next": "^12.0.1",
     "react": "^17.0.2",

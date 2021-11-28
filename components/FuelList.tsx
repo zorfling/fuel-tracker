@@ -6,6 +6,17 @@ import { useLocation } from './useLocation';
 
 interface Props {}
 
+const Location = ({
+  currentLocation
+}: {
+  currentLocation: GeolocationPosition | null;
+}) => (
+  <div>
+    Your location is: {currentLocation?.coords.latitude},{' '}
+    {currentLocation?.coords.longitude}
+  </div>
+);
+
 const FuelList = (props: Props) => {
   const currentLocation = useLocation();
   const { isLoading, isSuccess, error, data } = useQuery<FuelEntry[]>(
@@ -29,19 +40,23 @@ const FuelList = (props: Props) => {
   }, []);
 
   if (isLoading || !currentLocation) {
-    return <div>Loading...</div>;
+    return (
+      <div>
+        Loading...
+        <Location currentLocation={currentLocation} />
+      </div>
+    );
   }
 
   return (
     <div>
-      Your location is: {currentLocation?.coords.latitude},{' '}
-      {currentLocation?.coords.longitude}
+      <Location currentLocation={currentLocation} />
       <br />
       <br />
       <label>
         Filter: <input type="text" onChange={onChange} value={filter} />
       </label>
-      &nbsp;
+      <br />
       <label>
         Sort by({sort}):{' '}
         <select onChange={onChangeSort} value={sort}>
@@ -58,7 +73,15 @@ const FuelList = (props: Props) => {
           .filter((entry) =>
             entry.name.toLowerCase().includes(filter.toLowerCase())
           )
-          .sort((a, b) => a[sort] - b[sort])
+          .sort((a, b) => {
+            switch (sort) {
+              case 'distance':
+                return a.distance.radians - b.distance.radians;
+              case 'price':
+              default:
+                return a.price - b.price;
+            }
+          })
           .map((fuel) => {
             return <FuelEntryCard key={fuel.id} fuelEntry={fuel} />;
           })}

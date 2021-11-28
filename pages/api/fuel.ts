@@ -10,7 +10,7 @@ export interface FuelEntry {
   name: string;
   address: string;
   postcode: string;
-  distance: number;
+  distance: { radians: number; unit: 'm' | 'km' };
   distanceString: string;
   price: number;
   lastUpdated: string;
@@ -105,7 +105,7 @@ export default async function handler(
         name,
         address,
         postcode,
-        distance: distance,
+        distance: distance as { radians: number; unit: 'm' | 'km' },
         distanceString: distance.human_readable().toString(),
         price: site.Price,
         lastUpdated: format(

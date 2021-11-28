@@ -1,9 +1,9 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import turfDistance from '@turf/distance';
 import axios from 'axios';
-import Geo from 'geo-nearby';
 import { format, parseISO } from 'date-fns';
 import { enAU } from 'date-fns/locale';
-import Distance from 'geo-distance';
+import Geo from 'geo-nearby';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 export interface FuelEntry {
   id: number;
@@ -25,6 +25,14 @@ export default async function handler(
   const countryId = 21;
   let geoRegionId = 1;
   let geoRegionLevel = 2;
+
+  let logArray: string[] = [];
+
+  const myLog = (log: string) => {
+    logArray.push(log);
+  };
+
+  console.log = myLog;
 
   const base = process.env.FUEL_API_BASE;
   const token = process.env.FUEL_API_TOKEN;
@@ -103,18 +111,23 @@ export default async function handler(
       const { id, name, address, postcode, lat, lng } = siteDetails.find(
         (deet: any) => deet.id === site.SiteId
       );
-      const distance = (Distance as any).between(currentLocation, {
-        lat,
-        lng
-      });
+
+      const distance = turfDistance(
+        [currentLocation.lat, currentLocation.lng],
+        [lat, lng],
+        {
+          units: 'kilometers'
+        }
+      );
+
       return {
         id: site.SiteId,
         name,
         address,
         postcode,
         distance: distance,
-        distanceString: distance.human_readable().toString(),
-        price: site.Price,
+        distanceString: distance.toFixed(2) + ' km',
+        price: site.Price / 10,
         lastUpdated: format(
           parseISO(site.TransactionDateUtc + '+00'),
           'yyyy-MM-dd HH:mm:ss',
@@ -122,6 +135,7 @@ export default async function handler(
         )
       };
     })
+
     //     .filter((site: any) => site.name.includes('7-Eleven'))
     .sort((a: any, b: any) => (a.distance < b.distance ? -1 : 1));
   // .filter(site => site.price < 1500);*/
