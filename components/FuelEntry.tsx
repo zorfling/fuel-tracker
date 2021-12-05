@@ -4,18 +4,10 @@ import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 interface Props {
   fuelEntry: FuelEntry;
 }
-//oops
 
 export const FuelEntryCard = (props: Props) => {
-  const {
-    name,
-    address,
-    postcode,
-    distance,
-    distanceString,
-    price,
-    lastUpdated
-  } = props.fuelEntry;
+  const { name, address, postcode, distanceString, price, lastUpdated } =
+    props.fuelEntry;
   return (
     <div>
       <h1>Fuel Entry</h1>
@@ -23,7 +15,15 @@ export const FuelEntryCard = (props: Props) => {
         <dt>Name</dt>
         <dd>{name}</dd>
         <dt>Address</dt>
-        <dd>{address}</dd>
+        <dd>
+          <a
+            href={`https://www.google.com.au/maps/search/${name}+${address}+${postcode}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {address}
+          </a>
+        </dd>
         <dt>Postcode</dt>
         <dd>{postcode}</dd>
         <dt>Distance</dt>
