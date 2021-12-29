@@ -11,7 +11,6 @@ const Home: NextPage = () => {
       </Head>
 
       <main>
-        Here&lsquo;s a fuel tracker
         <FuelList />
       </main>
     </div>
