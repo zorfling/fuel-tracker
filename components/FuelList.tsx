@@ -68,9 +68,9 @@ const FuelList = (props: Props) => {
     [setSort]
   );
 
-  type DistanceFilter = '20km' | '15km' | '10km' | '5km' | '1km';
+  type DistanceFilter = '50km' | '20km' | '15km' | '10km' | '5km' | '1km';
   const distanceFilterKeys = useMemo<DistanceFilter[]>(
-    () => ['20km', '15km', '10km', '5km', '1km'],
+    () => ['50km', '20km', '15km', '10km', '5km', '1km'],
     []
   );
   const [distanceFilter, setDistanceFilter] =

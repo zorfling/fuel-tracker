@@ -389,7 +389,7 @@ export default async function handler(
     sorted: true
   });
 
-  const distanceRadiusKms = 10;
+  const distanceRadiusKms = 30;
 
   const nearbySites = geo
     .nearBy(currentLocation.lat, currentLocation.lng, distanceRadiusKms * 1000)
