@@ -1,10 +1,6 @@
-import React, {
-  ChangeEventHandler,
-  useCallback,
-  useMemo,
-  useState
-} from 'react';
+import React, { ChangeEventHandler, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from 'react-query';
+import { useVirtual } from 'react-virtual';
 import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 import { useLocalStorageState } from '../utils';
 import { FuelEntryCard } from './FuelEntry';
@@ -89,6 +85,39 @@ const FuelList = (props: Props) => {
     [distanceFilterKeys, setDistanceFilter]
   );
 
+  const filteredData = useMemo(() => {
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data
+      .filter((entry) =>
+        entry.name.toLowerCase().includes(filter.toLowerCase())
+      )
+      .filter(
+        (entry) =>
+          entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
+      )
+      .sort((a, b) => {
+        switch (sort) {
+          case 'distance':
+            return a.distance - b.distance;
+          case 'price':
+          default:
+            return a.price - b.price;
+        }
+      });
+  }, [data, distanceFilter, filter, sort]);
+
+  const theWindow = typeof window !== 'undefined' ? window : null;
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtual({
+    size: filteredData.length,
+    parentRef,
+    windowRef: useRef(theWindow)
+  });
+
   if (isLoading || !currentLocation) {
     return (
       <div>
@@ -128,28 +157,42 @@ const FuelList = (props: Props) => {
           ))}
         </select>
       </label>
-      {isSuccess &&
-        (data ?? []).length > 0 &&
-        (data ?? [])
-          .filter((entry) =>
-            entry.name.toLowerCase().includes(filter.toLowerCase())
-          )
-          .filter(
-            (entry) =>
-              entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
-          )
-          .sort((a, b) => {
-            switch (sort) {
-              case 'distance':
-                return a.distance - b.distance;
-              case 'price':
-              default:
-                return a.price - b.price;
-            }
-          })
-          .map((fuel) => {
-            return <FuelEntryCard key={fuel.id} fuelEntry={fuel} />;
-          })}
+      <div ref={parentRef} style={{ width: `430px` }}>
+        <div
+          style={{
+            height: `${rowVirtualizer.totalSize}px`,
+            width: '100%',
+            position: 'relative'
+          }}
+        >
+          {rowVirtualizer.virtualItems.map((virtualRow) => (
+            <div
+              key={virtualRow.key}
+              ref={virtualRow.measureRef}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`
+              }}
+            >
+              <FuelEntryCard
+                key={filteredData[virtualRow.index].id}
+                fuelEntry={filteredData[virtualRow.index]}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* <div>
+        <div>
+          {isSuccess &&
+            filteredData.map((fuel) => {
+              return <FuelEntryCard key={fuel.id} fuelEntry={fuel} />;
+            })}
+        </div>
+      </div> */}
     </div>
   );
 };

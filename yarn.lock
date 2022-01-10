@@ -418,6 +418,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@reach/observe-rect@^1.1.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@reach/observe-rect/-/observe-rect-1.2.0.tgz#d7a6013b8aafcc64c778a0ccb83355a11204d3b2"
+  integrity sha512-Ba7HmkFgfQxZqqaeIWWkNK0rEhpxVQHIoVyW1YDSkGsGIXzcaW4deC8B0pZrNSSyLTdIk7y+5olKt5+g0GmFIQ==
+
 "@rushstack/eslint-patch@^1.0.6":
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/@rushstack/eslint-patch/-/eslint-patch-1.0.9.tgz#1168db664faab4c3bb82c76124b393970e80bf89"
@@ -3463,6 +3468,13 @@ react-server-dom-webpack@0.0.0-experimental-3c4c1c470-20211021:
     loose-envify "^1.1.0"
     neo-async "^2.6.1"
     object-assign "^4.1.1"
+
+react-virtual@^2.10.0:
+  version "2.10.0"
+  resolved "https://registry.yarnpkg.com/react-virtual/-/react-virtual-2.10.0.tgz#110cc0f48bb6edffd253f532123a074e6bbec4cb"
+  integrity sha512-Mgy//1Ty0YMcELTooFq5mMrEb4dLRzS9PbPrgDbpdgGRgG9RuQrXBxgPCm1vNBonoiNZjbsGSEPLuJ7MuHLvLg==
+  dependencies:
+    "@reach/observe-rect" "^1.1.0"
 
 react@^17.0.2:
   version "17.0.2"
