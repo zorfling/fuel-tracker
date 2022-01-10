@@ -37,9 +37,12 @@ const FuelList = (props: Props) => {
   const { isLoading, isSuccess, error, data } = useQuery<FuelEntry[]>(
     ['GET_FUEL_LIST', currentLocation],
     () => {
-      return fetch(
-        `/api/fuel/${currentLocation?.coords.latitude}/${currentLocation?.coords.longitude}`
-      ).then((res) => res.json());
+      if (currentLocation) {
+        return fetch(
+          `/api/fuel/${currentLocation?.coords.latitude}/${currentLocation?.coords.longitude}`
+        ).then((res) => res.json());
+      }
+      return Promise.resolve([]);
     }
   );
 
