@@ -115,7 +115,10 @@ const FuelList = (props: Props) => {
   const rowVirtualizer = useVirtual({
     size: filteredData.length,
     parentRef,
-    windowRef: useRef(theWindow)
+    windowRef: useRef(theWindow),
+    estimateSize: useCallback(() => {
+      return 315;
+    }, [])
   });
 
   if (isLoading || !currentLocation) {
@@ -157,7 +160,7 @@ const FuelList = (props: Props) => {
           ))}
         </select>
       </label>
-      <div ref={parentRef} style={{ width: `430px` }}>
+      <div ref={parentRef} style={{ width: `400px` }}>
         <div
           style={{
             height: `${rowVirtualizer.totalSize}px`,
@@ -177,10 +180,12 @@ const FuelList = (props: Props) => {
                 transform: `translateY(${virtualRow.start}px)`
               }}
             >
-              <FuelEntryCard
-                key={filteredData[virtualRow.index].id}
-                fuelEntry={filteredData[virtualRow.index]}
-              />
+              <div style={{ width: '100%' }}>
+                <FuelEntryCard
+                  key={filteredData[virtualRow.index].id}
+                  fuelEntry={filteredData[virtualRow.index]}
+                />
+              </div>
             </div>
           ))}
         </div>
