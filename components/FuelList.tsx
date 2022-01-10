@@ -46,7 +46,7 @@ const FuelList = (props: Props) => {
     }
   );
 
-  const [filter, setFilter] = useLocalStorageState('filter', '7-Eleven');
+  const [filter, setFilter] = useLocalStorageState('filter', '');
   const onChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
     (evt) => {
       setFilter(evt.target.value);
