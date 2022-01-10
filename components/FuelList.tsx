@@ -108,7 +108,7 @@ const FuelList = (props: Props) => {
       </label>
       <br />
       <label>
-        Sort by({sort}):{' '}
+        Sort by:{' '}
         <select onChange={onChangeSort} value={sort}>
           {['Distance', 'Price'].map((option) => (
             <option key={option.toLowerCase()} value={option.toLowerCase()}>
@@ -119,7 +119,7 @@ const FuelList = (props: Props) => {
       </label>
       <br />
       <label>
-        Distance less than ({distanceFilter}):{' '}
+        Distance less than:{' '}
         <select onChange={onChangeDistanceFilter} value={distanceFilter}>
           {distanceFilterKeys.map((option) => (
             <option key={option} value={option}>
