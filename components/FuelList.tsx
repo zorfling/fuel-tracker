@@ -30,13 +30,14 @@ const Location = ({
 
 const FuelList = (props: Props) => {
   const currentLocation = useLocation();
-  const { isLoading, isSuccess, error, data } = useQuery<FuelEntry[]>(
+  const { isLoading, data } = useQuery<FuelEntry[]>(
     ['GET_FUEL_LIST', currentLocation],
-    () => {
+    async () => {
       if (currentLocation) {
-        return fetch(
+        const res = await fetch(
           `/api/fuel/${currentLocation?.coords.latitude}/${currentLocation?.coords.longitude}`
-        ).then((res) => res.json());
+        );
+        return await res.json();
       }
       return Promise.resolve([]);
     }
@@ -115,10 +116,7 @@ const FuelList = (props: Props) => {
   const rowVirtualizer = useVirtual({
     size: filteredData.length,
     parentRef,
-    windowRef: useRef(theWindow),
-    estimateSize: useCallback(() => {
-      return 315;
-    }, [])
+    windowRef: useRef(theWindow)
   });
 
   if (isLoading || !currentLocation) {
@@ -180,12 +178,10 @@ const FuelList = (props: Props) => {
                 transform: `translateY(${virtualRow.start}px)`
               }}
             >
-              <div style={{ width: '100%' }}>
-                <FuelEntryCard
-                  key={filteredData[virtualRow.index].id}
-                  fuelEntry={filteredData[virtualRow.index]}
-                />
-              </div>
+              <FuelEntryCard
+                key={filteredData[virtualRow.index].id}
+                fuelEntry={filteredData[virtualRow.index]}
+              />
             </div>
           ))}
         </div>
