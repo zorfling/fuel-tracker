@@ -66,7 +66,16 @@ export const FuelEntryCard = (props: Props) => {
       </Address>
       <PriceContainer>
         <Price>{price}</Price>
-        <Image src={brandLogo} width={100} height={100} alt="brand logo" />
+        <div
+          style={{
+            minHeight: '100px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <Image src={brandLogo} width={100} height={100} alt="brand logo" />
+        </div>
       </PriceContainer>
 
       {/* <dl>
