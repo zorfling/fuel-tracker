@@ -5,6 +5,7 @@ import Image from 'next/image';
 
 interface Props {
   fuelEntry: FuelEntry;
+  className?: string;
 }
 
 const Card = styled.div`
@@ -37,7 +38,7 @@ const PriceContainer = styled.div`
   align-items: center;
 `;
 
-export const FuelEntryCard = (props: Props) => {
+export const FuelEntryCard = ({ fuelEntry, className }: Props) => {
   const {
     name,
     address,
@@ -46,9 +47,9 @@ export const FuelEntryCard = (props: Props) => {
     price,
     brandLogo,
     lastUpdated
-  } = props.fuelEntry;
+  } = fuelEntry;
   return (
-    <Card>
+    <Card className={className}>
       <Address>
         <Name>{name}</Name>
         <div>

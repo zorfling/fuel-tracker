@@ -4,6 +4,7 @@ import { useVirtual } from 'react-virtual';
 import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
 import { useLocalStorageState } from '../utils';
 import { FuelEntryCard } from './FuelEntry';
+import { Map } from './Map';
 import { useLocation } from './useLocation';
 
 interface Props {}
@@ -116,6 +117,7 @@ const FuelList = (props: Props) => {
   const rowVirtualizer = useVirtual({
     size: filteredData.length,
     parentRef,
+    overscan: 5,
     windowRef: useRef(theWindow)
   });
 
@@ -130,35 +132,37 @@ const FuelList = (props: Props) => {
 
   return (
     <div>
-      <Location currentLocation={currentLocation} />
-      <br />
-      <br />
-      <label>
-        Filter: <input type="text" onChange={onChange} value={filter} />
-      </label>
-      <br />
-      <label>
-        Sort by:{' '}
-        <select onChange={onChangeSort} value={sort}>
-          {['Distance', 'Price'].map((option) => (
-            <option key={option.toLowerCase()} value={option.toLowerCase()}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      <br />
-      <label>
-        Distance less than:{' '}
-        <select onChange={onChangeDistanceFilter} value={distanceFilter}>
-          {distanceFilterKeys.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div ref={parentRef} style={{ width: `400px` }}>
+      <div>
+        <Map currentLocation={currentLocation} results={filteredData} />
+        <br />
+        <br />
+        <label>
+          Filter: <input type="text" onChange={onChange} value={filter} />
+        </label>
+        <br />
+        <label>
+          Sort by:{' '}
+          <select onChange={onChangeSort} value={sort}>
+            {['Distance', 'Price'].map((option) => (
+              <option key={option.toLowerCase()} value={option.toLowerCase()}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <br />
+        <label>
+          Distance less than:{' '}
+          <select onChange={onChangeDistanceFilter} value={distanceFilter}>
+            {distanceFilterKeys.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div ref={parentRef} style={{ width: '400px' }}>
         <div
           style={{
             height: `${rowVirtualizer.totalSize}px`,
@@ -186,14 +190,6 @@ const FuelList = (props: Props) => {
           ))}
         </div>
       </div>
-      {/* <div>
-        <div>
-          {isSuccess &&
-            filteredData.map((fuel) => {
-              return <FuelEntryCard key={fuel.id} fuelEntry={fuel} />;
-            })}
-        </div>
-      </div> */}
     </div>
   );
 };

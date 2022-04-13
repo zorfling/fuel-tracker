@@ -16,6 +16,8 @@ export interface FuelEntry {
   brandId: number;
   brandLogo: string;
   lastUpdated: string;
+  lat: number;
+  lng: number;
 }
 
 export default async function handler(
@@ -429,7 +431,9 @@ export default async function handler(
           parseISO(site.TransactionDateUtc + '+00'),
           'yyyy-MM-dd HH:mm:ss',
           { locale: enAU }
-        )
+        ),
+        lat,
+        lng
       };
     })
 
