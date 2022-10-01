@@ -29,6 +29,18 @@ const Location = ({
     </div>
   );
 
+const distanceFilterKeys = [
+  '250km',
+  '100km',
+  '50km',
+  '20km',
+  '15km',
+  '10km',
+  '5km',
+  '1km'
+] as const;
+type DistanceFilter = typeof distanceFilterKeys[number];
+
 const FuelList = (props: Props) => {
   const currentLocation = useLocation();
   const { isLoading, data } = useQuery<FuelEntry[]>(
@@ -66,11 +78,6 @@ const FuelList = (props: Props) => {
     [setSort]
   );
 
-  type DistanceFilter = '50km' | '20km' | '15km' | '10km' | '5km' | '1km';
-  const distanceFilterKeys = useMemo<DistanceFilter[]>(
-    () => ['50km', '20km', '15km', '10km', '5km', '1km'],
-    []
-  );
   const [distanceFilter, setDistanceFilter] =
     useLocalStorageState<DistanceFilter>('distanceFilter', '10km');
   const onChangeDistanceFilter = useCallback<
@@ -84,7 +91,7 @@ const FuelList = (props: Props) => {
         setDistanceFilter(field);
       }
     },
-    [distanceFilterKeys, setDistanceFilter]
+    [setDistanceFilter]
   );
 
   const filteredData = useMemo(() => {

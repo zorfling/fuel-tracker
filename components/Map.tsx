@@ -1,5 +1,6 @@
 import {
   GoogleMap,
+  GoogleMapProps,
   InfoWindow,
   Marker,
   useJsApiLoader
@@ -29,7 +30,7 @@ export const Map = memo(({ currentLocation, results }: MapProps) => {
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_MAPS_API_KEY ?? ''
   });
-  const [map, setMap] = useState(null);
+  const [map, setMap] = useState<GoogleMapProps | null>(null);
 
   const [showInfo, setShowInfo] = useState<FuelEntry>();
   const onLoad = useCallback(function callback(map) {
@@ -45,17 +46,24 @@ export const Map = memo(({ currentLocation, results }: MapProps) => {
   }, []);
 
   const { latitude, longitude } = currentLocation.coords;
+  const [mapCentre, setMapCentre] = useState<
+    google.maps.LatLng | google.maps.LatLngLiteral | undefined
+  >({ lat: latitude, lng: longitude });
 
   return isLoaded ? (
     <GoogleMap
       zoom={12}
-      center={{
-        lat: latitude,
-        lng: longitude
-      }}
+      center={mapCentre}
       onLoad={onLoad}
       onUnmount={onUnmount}
       mapContainerStyle={containerStyle}
+      onCenterChanged={() => {
+        const centre = map?.center;
+        if (!map || !centre) {
+          return;
+        }
+        setMapCentre(centre);
+      }}
     >
       <Marker
         position={{
