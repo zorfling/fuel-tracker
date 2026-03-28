@@ -65,14 +65,7 @@ function shortLocationName(result: { display_name: string; address?: Record<stri
   const addr = result.address;
   if (addr) {
     const place = addr.suburb || addr.town || addr.city || addr.village || addr.hamlet || addr.county || '';
-    const stateAbbr: Record<string, string> = {
-      'Queensland': 'QLD', 'New South Wales': 'NSW', 'Victoria': 'VIC',
-      'South Australia': 'SA', 'Western Australia': 'WA', 'Tasmania': 'TAS',
-      'Northern Territory': 'NT', 'Australian Capital Territory': 'ACT',
-    };
-    const state = addr.state || '';
-    const short = stateAbbr[state] || state;
-    if (place) return short ? `${place}, ${short}` : place;
+    if (place) return place;
   }
   // Fallback: take first two comma-separated parts
   const parts = result.display_name.split(',').map(s => s.trim());
