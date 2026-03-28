@@ -218,9 +218,13 @@ const FuelList = () => {
   const priceTierFor = useCallback(
     (price: number) => {
       if (!filteredData.length) return 'mid' as const;
-      const prices = filteredData.map((entry) => entry.price);
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
+      // Filter out outliers for color calc: ignore prices below 50c or above 500c
+      const sane = filteredData
+        .map((entry) => entry.price)
+        .filter((p) => p >= 50 && p < 500);
+      if (!sane.length) return 'mid' as const;
+      const min = Math.min(...sane);
+      const max = Math.max(...sane);
       const range = max - min || 1;
       const cheapThreshold = min + range / 3;
       const midThreshold = min + (2 * range) / 3;
