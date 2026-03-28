@@ -211,10 +211,10 @@ const FuelList = () => {
           case 'price':
           default: {
             // When price lock is active, sort by effective price for 7-Eleven
-            const aPrice = (priceLock && a.brandId === 113)
+            const aPrice = (priceLock && sevenElevenOnly && a.brandId === 113)
               ? Math.max(Math.min(priceLock, a.price), a.price - 25)
               : a.price;
-            const bPrice = (priceLock && b.brandId === 113)
+            const bPrice = (priceLock && sevenElevenOnly && b.brandId === 113)
               ? Math.max(Math.min(priceLock, b.price), b.price - 25)
               : b.price;
             return aPrice - bPrice;
@@ -245,8 +245,8 @@ const FuelList = () => {
 
   const getEffectivePrice = useCallback(
     (entry: FuelEntry) => {
-      // Price lock only applies to 7-Eleven stations
-      if (!priceLock || entry.brandId !== 113) return undefined;
+      // Price lock only applies when 7-Eleven filter is active
+      if (!priceLock || !sevenElevenOnly || entry.brandId !== 113) return undefined;
       // You pay the lower of: your lock price, or pump price minus 25c (max discount)
       const maxDiscount = entry.price - 25;
       const effective = Math.max(Math.min(priceLock, entry.price), maxDiscount);
