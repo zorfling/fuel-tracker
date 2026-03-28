@@ -11,6 +11,8 @@ import { Map } from './Map';
 import { FUEL_TYPES, DEFAULT_FUEL_ID } from '../config/fuelTypes';
 import type { FuelTypeId } from '../config/fuelTypes';
 import { TrendBar } from './TrendBar';
+import { FuelListSkeleton } from './FuelCardSkeleton';
+import { InsightsPanel } from './InsightsPanel';
 import { filterAndSort, getEffectivePrice, getPriceTier } from '../lib/fuelFilters';
 const distanceFilterKeys = [
   '250km',
@@ -169,7 +171,7 @@ const FuelList = () => {
     );
   }, [searchParams]);
 
-  const { isLoading, data } = useQuery<FuelEntry[]>({
+  const { isLoading, data, dataUpdatedAt } = useQuery<FuelEntry[]>({
     queryKey: ['GET_FUEL_LIST', location?.lat, location?.lng, fuelTypeId],
     queryFn: async () => {
       if (!location) {
@@ -409,6 +411,7 @@ const FuelList = () => {
       {filteredData.length > 0 && location && (
         <div className="mx-auto max-w-5xl px-4 pt-4">
           <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} lat={location.lat} lng={location.lng} />
+          <InsightsPanel lat={location.lat} lng={location.lng} fuelTypeId={fuelTypeId} />
         </div>
       )}
 
@@ -422,9 +425,17 @@ const FuelList = () => {
           <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
             <span>{filteredData.length} results</span>
             {isLoading && <span>Updating prices…</span>}
+            {!isLoading && dataUpdatedAt > 0 && (
+              <span>Updated {new Date(dataUpdatedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}</span>
+            )}
           </div>
         </div>
 
+        {isLoading && !filteredData.length ? (
+          <div className="p-4">
+            <FuelListSkeleton />
+          </div>
+        ) : (
         <div
           ref={parentRef}
           className="h-[70vh] overflow-auto rounded-2xl border bg-white/60 p-4 dark:bg-slate-900/60"
@@ -461,6 +472,7 @@ const FuelList = () => {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
