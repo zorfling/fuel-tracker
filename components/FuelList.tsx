@@ -92,6 +92,9 @@ const FuelList = () => {
     'distanceFilter',
     '10km'
   );
+  const [sevenElevenOnly, setSevenElevenOnly] = useLocalStorageState('sevenElevenOnly', false);
+  const [priceLockInput, setPriceLockInput] = useLocalStorageState('priceLock', '');
+  const priceLock = priceLockInput ? Number.parseFloat(priceLockInput) : null;
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
@@ -197,6 +200,7 @@ const FuelList = () => {
 
     return data
       .filter((entry) => entry.name.toLowerCase().includes(filter.toLowerCase()))
+      .filter((entry) => !sevenElevenOnly || entry.brandId === 113)
       .filter(
         (entry) => entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
       )
@@ -205,11 +209,19 @@ const FuelList = () => {
           case 'distance':
             return a.distance - b.distance;
           case 'price':
-          default:
-            return a.price - b.price;
+          default: {
+            // When price lock is active, sort by effective price for 7-Eleven
+            const aPrice = (priceLock && a.brandId === 113)
+              ? Math.max(Math.min(priceLock, a.price), a.price - 25)
+              : a.price;
+            const bPrice = (priceLock && b.brandId === 113)
+              ? Math.max(Math.min(priceLock, b.price), b.price - 25)
+              : b.price;
+            return aPrice - bPrice;
+          }
         }
       });
-  }, [data, distanceFilter, filter, sort]);
+  }, [data, distanceFilter, filter, priceLock, sevenElevenOnly, sort]);
 
   const priceTierFor = useCallback(
     (price: number) => {
@@ -229,6 +241,19 @@ const FuelList = () => {
       return 'expensive' as const;
     },
     [filteredData]
+  );
+
+  const getEffectivePrice = useCallback(
+    (entry: FuelEntry) => {
+      // Price lock only applies to 7-Eleven stations
+      if (!priceLock || entry.brandId !== 113) return undefined;
+      // You pay the lower of: your lock price, or pump price minus 25c (max discount)
+      const maxDiscount = entry.price - 25;
+      const effective = Math.max(Math.min(priceLock, entry.price), maxDiscount);
+      // If effective equals pump price (lock is worse), don't show it
+      return effective < entry.price ? effective : undefined;
+    },
+    [priceLock]
   );
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -358,8 +383,42 @@ const FuelList = () => {
                   </option>
                 ))}
               </select>
+              <button
+                className={`rounded-2xl border px-3 py-2 text-sm font-medium transition ${
+                  sevenElevenOnly
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                    : 'bg-white text-slate-600 hover:border-slate-400 dark:bg-slate-900 dark:text-slate-300'
+                }`}
+                onClick={() => setSevenElevenOnly(!sevenElevenOnly)}
+              >
+                7-Eleven
+              </button>
             </div>
           </form>
+          {sevenElevenOnly && (
+            <div className="mt-3 flex items-center gap-2">
+              <label className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">🔒 Price lock</label>
+              <div className="flex items-center gap-1 rounded-2xl border bg-white px-3 py-2 dark:bg-slate-900">
+                <input
+                  className="w-20 bg-transparent text-sm outline-none"
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="e.g. 165"
+                  value={priceLockInput}
+                  onChange={(e) => setPriceLockInput(e.target.value)}
+                />
+                <span className="text-xs text-slate-400">¢/L</span>
+              </div>
+              {priceLock && (
+                <button
+                  className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  onClick={() => setPriceLockInput('')}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -400,7 +459,7 @@ const FuelList = () => {
                   className="pb-4"
                 >
                   {entry ? (
-                    <FuelEntryCard fuelEntry={entry} priceTier={priceTierFor(entry.price)} />
+                    <FuelEntryCard fuelEntry={entry} priceTier={priceTierFor(getEffectivePrice(entry) ?? entry.price)} effectivePrice={getEffectivePrice(entry)} />
                   ) : null}
                 </div>
               );

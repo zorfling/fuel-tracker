@@ -7,6 +7,7 @@ import type { BrandId } from '../config/brandLogos';
 interface Props {
   fuelEntry: FuelEntry;
   priceTier: 'cheap' | 'mid' | 'expensive';
+  effectivePrice?: number;
 }
 
 const priceStyles: Record<Props['priceTier'], string> = {
@@ -15,11 +16,13 @@ const priceStyles: Record<Props['priceTier'], string> = {
   expensive: 'text-rose-500',
 };
 
-export const FuelEntryCard = ({ fuelEntry, priceTier }: Props) => {
+export const FuelEntryCard = ({ fuelEntry, priceTier, effectivePrice }: Props) => {
   const { name, address, postcode, distanceString, price, brandId, lastUpdated } =
     fuelEntry;
 
   const logoSrc = getBrandLogo(brandId as BrandId);
+  const showLock = effectivePrice != null && effectivePrice !== price;
+  const displayPrice = effectivePrice ?? price;
 
   return (
     <div className="rounded-2xl border bg-white/80 p-4 shadow-sm backdrop-blur transition hover:shadow-md dark:bg-slate-900/80">
@@ -41,8 +44,15 @@ export const FuelEntryCard = ({ fuelEntry, priceTier }: Props) => {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className={`text-3xl font-bold ${priceStyles[priceTier]}`}>
-            {price.toFixed(1)}
+          <div className="text-right">
+            <div className={`text-3xl font-bold ${priceStyles[priceTier]}`}>
+              {displayPrice.toFixed(1)}
+            </div>
+            {showLock && (
+              <div className="text-xs text-slate-400 dark:text-slate-500 line-through">
+                {price.toFixed(1)}¢ pump
+              </div>
+            )}
           </div>
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
