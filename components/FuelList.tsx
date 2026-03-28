@@ -99,6 +99,8 @@ const FuelList = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const lastScrollY = useRef(0);
   const [searchInput, setSearchInput] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
 
@@ -117,6 +119,21 @@ const FuelList = () => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
       setShowMap(true);
     }
+  }, []);
+
+  // Collapse header on scroll down, expand on scroll up
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > lastScrollY.current && y > 80) {
+        setHeaderCollapsed(true);
+      } else if (y < lastScrollY.current) {
+        setHeaderCollapsed(false);
+      }
+      lastScrollY.current = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
@@ -289,15 +306,39 @@ const FuelList = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80">
+      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80 transition-all duration-300">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Fuel Tracker</div>
-            <div className="text-xl font-semibold text-slate-900 dark:text-white">
-              {formatLocationName(location)}
+          <div className="flex items-center gap-3">
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Fuel Tracker</div>
+              <div className="text-xl font-semibold text-slate-900 dark:text-white">
+                {formatLocationName(location)}
+              </div>
             </div>
+            {headerCollapsed && filteredData.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <span>·</span>
+                <span>{filteredData.length} stations</span>
+                {filteredData[0] && sort === 'price' && (
+                  <>
+                    <span>·</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      from {filteredData[0].price.toFixed(1)}¢
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {headerCollapsed && (
+              <button
+                className="rounded-full border px-3 py-1 text-sm font-medium text-slate-600 hover:border-slate-400 dark:text-slate-300"
+                onClick={() => { setHeaderCollapsed(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              >
+                ▼ Filters
+              </button>
+            )}
             <button
               className="rounded-full border px-3 py-1 text-sm font-medium text-slate-600 hover:border-slate-400 dark:text-slate-300"
               onClick={() => setShowMap((prev) => !prev)}
@@ -313,7 +354,7 @@ const FuelList = () => {
             </button>
           </div>
         </div>
-        <div className="mx-auto max-w-5xl px-4 pb-4">
+        <div className={`mx-auto max-w-5xl px-4 pb-4 overflow-hidden transition-all duration-300 ${headerCollapsed ? 'max-h-0 pb-0 opacity-0' : 'max-h-96 opacity-100'}`}>
           <form className="flex flex-col gap-3 md:flex-row md:items-center" onSubmit={handleSearch}>
             <div className="flex flex-1 items-center gap-2 rounded-2xl border bg-white px-3 py-2 dark:bg-slate-900">
               <input
