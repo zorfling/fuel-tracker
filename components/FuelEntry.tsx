@@ -1,7 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import type { FuelEntry } from '../types/fuel';
+import { getBrandLogo } from '../config/brandLogos';
+import type { BrandId } from '../config/brandLogos';
 
 interface Props {
   fuelEntry: FuelEntry;
@@ -11,22 +12,17 @@ interface Props {
 const priceStyles: Record<Props['priceTier'], string> = {
   cheap: 'text-emerald-500',
   mid: 'text-amber-500',
-  expensive: 'text-rose-500'
+  expensive: 'text-rose-500',
 };
 
 export const FuelEntryCard = ({ fuelEntry, priceTier }: Props) => {
-  const {
-    name,
-    address,
-    postcode,
-    distanceString,
-    price,
-    brandLogo,
-    lastUpdated
-  } = fuelEntry;
+  const { name, address, postcode, distanceString, price, brandId, lastUpdated } =
+    fuelEntry;
+
+  const logoSrc = getBrandLogo(brandId as BrandId);
 
   return (
-    <div className="rounded-2xl border bg-white/80 dark:bg-slate-900/80 p-4 shadow-sm backdrop-blur transition hover:shadow-md">
+    <div className="rounded-2xl border bg-white/80 p-4 shadow-sm backdrop-blur transition hover:shadow-md dark:bg-slate-900/80">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h3 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -48,12 +44,13 @@ export const FuelEntryCard = ({ fuelEntry, priceTier }: Props) => {
           <div className={`text-3xl font-bold ${priceStyles[priceTier]}`}>
             {price.toFixed(1)}
           </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 p-2 dark:bg-slate-800">
-            <Image
-              src={brandLogo}
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoSrc}
               width={56}
               height={56}
-              alt={`${name} brand logo`}
+              alt={name}
               className="object-contain"
             />
           </div>

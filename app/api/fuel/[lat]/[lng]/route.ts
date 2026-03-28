@@ -5,7 +5,6 @@ import { enAU } from 'date-fns/locale';
 import Geo from 'geo-nearby';
 import { NextResponse } from 'next/server';
 
-import { getBrandLogo } from '../../../../../config/brandLogos';
 import type { FuelEntry } from '../../../../../types/fuel';
 
 export async function GET(
@@ -98,7 +97,7 @@ export async function GET(
         distanceString: distance.toFixed(2) + ' km',
         price: site.Price / 10,
         brandId: brandId,
-        brandLogo: getBrandLogo(brandId),
+        brandLogo: '',
         lastUpdated: format(
           parseISO(site.TransactionDateUtc + '+00'),
           'yyyy-MM-dd HH:mm:ss',

@@ -49,58 +49,51 @@ export const brands = [
 
 export type BrandId = (typeof brands)[number]['BrandId'];
 
-export const brandLogos: { [brand in BrandId]: string | undefined } = {
-  2: 'http://logok.org/wp-content/uploads/2020/09/Caltex-logo--1536x1229.png',
-  5: 'https://upload.wikimedia.org/wikipedia/en/d/d2/BP_Helios_logo.svg',
-  12: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Eo_circle_orange_letter-i.svg/100px-Eo_circle_orange_letter-i.svg.png',
-  16: 'https://i.pinimg.com/originals/74/93/52/74935256bc6467ce1f613e8ae8a7b444.jpg',
-  20: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Shell_logo.svg/150px-Shell_logo.svg.png',
-  23: 'https://www.kdpr.com.au/wp-content/uploads/united-petroleum-logo.jpg',
-  57: 'https://metropetroleum.b-cdn.net/wp-content/uploads/2020/07/Metro-Logo-Blue.png',
-  86: 'https://www.libertyoil.com.au/images/logo.png',
-  110: 'https://cdn.australia247.info/assets/uploads/a20ae9e979d1dddc5f1e84824ad66097_-queensland-moreton-bay-region-kallangur-freedom-fuels-kallangurhtml.jpg',
-  111: 'https://cdn.australia247.info/assets/uploads/2832998c9c07f9d51324c62dcde0fe87_-new-south-wales-the-hills-shire-council-northmead-coles-expresshtml.jpg',
-  112: 'http://www.parkridgetowncentre.com.au/wp-content/uploads/2018/04/caltex-photo.jpg',
-  113: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/7-eleven_logo.svg/100px-7-eleven_logo.svg.png',
-  5094: 'https://fuelprice.io/wp-content/uploads/2018/08/puma-favicon-150x150.jpg',
-  2418945: 'https://upload.wikimedia.org/wikipedia/en/d/d2/BP_Helios_logo.svg',
-  2418994: 'https://www.pacificpetroleum.com.au/wp-content/uploads/2020/06/profile-picture-640x640-1-300x300.jpg',
-  3421066: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Ampol_Logo_May_2020.svg/100px-Ampol_Logo_May_2020.svg.png',
-  7: undefined,
-  27: undefined,
-  39: undefined,
-  51: undefined,
-  65: undefined,
-  72: undefined,
-  87: undefined,
-  105: undefined,
-  108: undefined,
-  114: undefined,
-  115: undefined,
-  116: undefined,
-  167: undefined,
-  169: undefined,
-  2301: undefined,
-  4896: undefined,
-  2031003: undefined,
-  2031031: undefined,
-  2418946: undefined,
-  2418947: undefined,
-  2418951: undefined,
-  2418995: undefined,
-  2419007: undefined,
-  2419008: undefined,
-  2419036: undefined,
-  2419037: undefined,
-  2459022: undefined,
-  3421028: undefined,
-  3421073: undefined,
-  3421074: undefined
+// Brand colors for the initials fallback
+const brandColors: Partial<Record<BrandId, string>> = {
+  2: '#e2001a',    // Caltex red
+  5: '#009900',    // BP green
+  20: '#fbce07',   // Shell yellow
+  23: '#1a3d8f',   // United blue
+  57: '#003b7c',   // Metro blue
+  86: '#003d6b',   // Liberty blue
+  111: '#ed1c24',  // Coles red
+  113: '#00805a',  // 7-Eleven green
+  5094: '#e4002b', // Puma red
+  3421066: '#003c8f', // Ampol blue
 };
 
-const fallbackLogo =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Icon-round-Question_mark.svg/200px-Icon-round-Question_mark.svg.png';
+function getInitials(name: string): string {
+  if (name === '7 Eleven') return '7E';
+  if (name === 'AM/PM') return 'AM';
+  return name
+    .split(/\s+/)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
-export const getBrandLogo = (brandId: BrandId) => {
-  return brandLogos[brandId] || fallbackLogo;
+function generateInitialsSvg(name: string, brandId: BrandId): string {
+  const initials = getInitials(name);
+  const color = brandColors[brandId] || '#475569';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+    <rect width="80" height="80" rx="16" fill="${color}"/>
+    <text x="40" y="42" text-anchor="middle" dominant-baseline="central" font-family="system-ui,-apple-system,sans-serif" font-weight="700" font-size="${initials.length > 2 ? '22' : '28'}" fill="white">${initials}</text>
+  </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+// Build the logo map — all brands get a clean initials-based icon
+const brandLogoMap = new Map<BrandId, string>();
+for (const brand of brands) {
+  brandLogoMap.set(brand.BrandId, generateInitialsSvg(brand.Name, brand.BrandId));
+}
+
+export const getBrandLogo = (brandId: BrandId): string => {
+  return brandLogoMap.get(brandId) || generateInitialsSvg('?', brandId);
+};
+
+export const getBrandName = (brandId: BrandId): string => {
+  return brands.find(b => b.BrandId === brandId)?.Name || 'Unknown';
 };
