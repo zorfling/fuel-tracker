@@ -61,9 +61,21 @@ const geocodeWithGoogle = async (query: string, apiKey: string) => {
   };
 };
 
+function shortLocationName(result: { display_name: string; address?: Record<string, string> }): string {
+  const addr = result.address;
+  if (addr) {
+    const place = addr.suburb || addr.town || addr.city || addr.village || addr.hamlet || addr.county || '';
+    const state = addr.state || '';
+    if (place) return state ? `${place}, ${state}` : place;
+  }
+  // Fallback: take first two comma-separated parts
+  const parts = result.display_name.split(',').map(s => s.trim());
+  return parts.slice(0, 2).join(', ');
+}
+
 const geocodeWithNominatim = async (query: string) => {
   const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
+    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(query)}`
   );
   const data = await response.json();
   if (!data || data.length === 0) {
@@ -72,7 +84,7 @@ const geocodeWithNominatim = async (query: string) => {
   return {
     lat: Number.parseFloat(data[0].lat),
     lng: Number.parseFloat(data[0].lon),
-    name: data[0].display_name
+    name: shortLocationName(data[0])
   };
 };
 
