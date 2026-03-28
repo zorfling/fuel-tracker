@@ -125,29 +125,25 @@ const FuelList = () => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        let name = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        let name = '';
         try {
-          const apiKey = process.env.NEXT_PUBLIC_MAPS_API_KEY;
-          if (apiKey) {
-            const res = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&result_type=locality|sublocality|postal_code&key=${apiKey}`
-            );
-            const data = await res.json();
-            if (data.results?.[0]) {
-              name = data.results[0].formatted_address.split(',').slice(0, 2).join(',').trim();
-            }
-          } else {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`
-            );
+          // Use Nominatim (free, no API key needed, works from browser)
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`,
+            { headers: { 'Accept': 'application/json' } }
+          );
+          if (res.ok) {
             const data = await res.json();
             const addr = data.address;
-            name = addr?.suburb || addr?.town || addr?.city || addr?.village || name;
+            name = addr?.suburb || addr?.town || addr?.city || addr?.village || '';
+            if (name && addr?.state) {
+              name = `${name}, ${addr.state}`;
+            }
           }
         } catch {
-          // Fall back to coords — no big deal
+          // Reverse geocode failed — that's fine, just show coords
         }
-        setLocation({ lat: latitude, lng: longitude, name });
+        setLocation({ lat: latitude, lng: longitude, name: name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` });
       },
       (error) => {
         setLocationError(error.message || 'Location permission denied');
@@ -262,10 +258,7 @@ const FuelList = () => {
     setLocationError(null);
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_MAPS_API_KEY;
-      const result = apiKey
-        ? await geocodeWithGoogle(searchInput, apiKey)
-        : await geocodeWithNominatim(searchInput);
+      const result = await geocodeWithNominatim(searchInput);
 
       setLocation(result);
       const params = new URLSearchParams({
