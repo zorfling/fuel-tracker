@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { FuelEntry } from '../types/fuel';
 
 type PriceSnapshot = {
@@ -11,10 +12,25 @@ type PriceSnapshot = {
   location: string;
 };
 
-const STORAGE_KEY = 'fuelTrends';
-const MAX_SNAPSHOTS = 90; // ~3 months of daily checks
+type DbSnapshot = {
+  cheapest: number;
+  median: number;
+  average: number;
+  stationCount: number;
+  timestamp: string;
+};
 
-function getSnapshots(): PriceSnapshot[] {
+type TrendsResponse = {
+  tracked: boolean;
+  locationId?: string;
+  name?: string;
+  snapshots: DbSnapshot[];
+};
+
+const STORAGE_KEY = 'fuelTrends';
+const MAX_SNAPSHOTS = 90;
+
+function getLocalSnapshots(): PriceSnapshot[] {
   if (typeof window === 'undefined') return [];
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -23,9 +39,8 @@ function getSnapshots(): PriceSnapshot[] {
   }
 }
 
-function saveSnapshot(snapshot: PriceSnapshot) {
-  const existing = getSnapshots();
-  // Only save one snapshot per day per fuel type per location
+function saveLocalSnapshot(snapshot: PriceSnapshot) {
+  const existing = getLocalSnapshots();
   const today = new Date(snapshot.timestamp).toDateString();
   const isDuplicate = existing.some(
     (s) =>
@@ -34,7 +49,6 @@ function saveSnapshot(snapshot: PriceSnapshot) {
       s.location === snapshot.location
   );
   if (isDuplicate) return;
-
   const updated = [...existing, snapshot].slice(-MAX_SNAPSHOTS);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
@@ -60,7 +74,6 @@ function MiniSparkline({ values, width = 120, height = 32 }: { values: number[];
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Latest point dot */}
       <circle
         cx={(values.length - 1) * step}
         cy={height - ((values[values.length - 1] - min) / range) * (height - 4) - 2}
@@ -75,9 +88,13 @@ interface TrendBarProps {
   data: FuelEntry[];
   fuelTypeId: number;
   locationName: string;
+  lat: number;
+  lng: number;
 }
 
-export function TrendBar({ data, fuelTypeId, locationName }: TrendBarProps) {
+export function TrendBar({ data, fuelTypeId, locationName, lat, lng }: TrendBarProps) {
+  const [isTracking, setIsTracking] = useState(false);
+
   const sanePrices = useMemo(
     () => data.map((e) => e.price).filter((p) => p >= 50 && p < 500).sort((a, b) => a - b),
     [data]
@@ -86,10 +103,24 @@ export function TrendBar({ data, fuelTypeId, locationName }: TrendBarProps) {
   const cheapest = sanePrices[0];
   const median = sanePrices[Math.floor(sanePrices.length / 2)];
 
-  // Record today's snapshot
+  // Fetch DB trends
+  const { data: trendsData, refetch: refetchTrends } = useQuery<TrendsResponse>({
+    queryKey: ['trends', lat, lng, fuelTypeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/trends?lat=${lat}&lng=${lng}&fuelTypeId=${fuelTypeId}&days=90`);
+      return res.json();
+    },
+    enabled: Boolean(lat && lng),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isDbTracked = trendsData?.tracked ?? false;
+  const dbSnapshots = trendsData?.snapshots ?? [];
+
+  // Save to localStorage as fallback
   useEffect(() => {
     if (cheapest && median && locationName) {
-      saveSnapshot({
+      saveLocalSnapshot({
         timestamp: Date.now(),
         cheapest,
         median,
@@ -99,19 +130,48 @@ export function TrendBar({ data, fuelTypeId, locationName }: TrendBarProps) {
     }
   }, [cheapest, median, fuelTypeId, locationName]);
 
-  // Get historical data for this fuel type + location
-  const history = useMemo(() => {
-    const all = getSnapshots();
+  // Get local history for fallback
+  const localHistory = useMemo(() => {
+    const all = getLocalSnapshots();
     return all
       .filter((s) => s.fuelTypeId === fuelTypeId && s.location === locationName)
       .sort((a, b) => a.timestamp - b.timestamp);
   }, [fuelTypeId, locationName]);
 
-  if (!sanePrices.length) return null;
+  // Use DB snapshots if tracked, otherwise localStorage
+  const chartValues = isDbTracked && dbSnapshots.length > 0
+    ? dbSnapshots.map((s) => s.cheapest)
+    : localHistory.map((s) => s.cheapest);
 
-  const cheapestValues = history.map((s) => s.cheapest);
-  const prevCheapest = history.length >= 2 ? history[history.length - 2].cheapest : null;
-  const trend = prevCheapest !== null ? cheapest - prevCheapest : null;
+  const prevCheapest = chartValues.length >= 2 ? chartValues[chartValues.length - 2] : null;
+  const trend = prevCheapest !== null && cheapest ? cheapest - prevCheapest : null;
+
+  const handleTrack = async () => {
+    setIsTracking(true);
+    try {
+      await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng, name: locationName }),
+      });
+      await refetchTrends();
+    } finally {
+      setIsTracking(false);
+    }
+  };
+
+  const handleUntrack = async () => {
+    if (!trendsData?.locationId) return;
+    setIsTracking(true);
+    try {
+      await fetch(`/api/locations?id=${trendsData.locationId}`, { method: 'DELETE' });
+      await refetchTrends();
+    } finally {
+      setIsTracking(false);
+    }
+  };
+
+  if (!sanePrices.length) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-white/80 px-4 py-3 text-sm backdrop-blur dark:bg-slate-900/80">
@@ -134,12 +194,31 @@ export function TrendBar({ data, fuelTypeId, locationName }: TrendBarProps) {
           {(sanePrices[sanePrices.length - 1] - sanePrices[0]).toFixed(1)}¢
         </span>
       </div>
-      {cheapestValues.length >= 2 && (
+      {chartValues.length >= 2 && (
         <div className="flex items-center gap-2 text-sky-500">
           <span className="text-xs text-slate-400 dark:text-slate-500">Trend</span>
-          <MiniSparkline values={cheapestValues} />
+          <MiniSparkline values={chartValues} />
         </div>
       )}
+      <div className="ml-auto">
+        {isDbTracked ? (
+          <button
+            className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+            onClick={handleUntrack}
+            disabled={isTracking}
+          >
+            ✓ Tracking
+          </button>
+        ) : (
+          <button
+            className="rounded-full border px-3 py-1 text-xs font-medium text-slate-500 hover:border-sky-400 hover:text-sky-600 dark:text-slate-400"
+            onClick={handleTrack}
+            disabled={isTracking}
+          >
+            {isTracking ? 'Saving…' : '📍 Track history'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TrackedLocation {
+  id        String   @id @default(cuid())
+  latQ      Float    // quantized to 2 decimal places
+  lngQ      Float    // quantized to 2 decimal places
+  name      String   // human-friendly display name
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots PriceSnapshot[]
+
+  @@unique([latQ, lngQ])
+  @@index([latQ, lngQ])
+}
+
+model PriceSnapshot {
+  id         String   @id @default(cuid())
+  locationId String
+  fuelTypeId Int
+  cheapest   Float
+  median     Float
+  average    Float
+  stationCount Int
+  timestamp  DateTime @default(now())
+
+  location TrackedLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, fuelTypeId, timestamp])
+  @@index([timestamp])
+}

@@ -438,7 +438,7 @@ const FuelList = () => {
 
       {filteredData.length > 0 && location && (
         <div className="mx-auto max-w-5xl px-4 pt-4">
-          <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} />
+          <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} lat={location.lat} lng={location.lng} />
         </div>
       )}
 
