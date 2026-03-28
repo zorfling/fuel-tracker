@@ -123,12 +123,31 @@ const FuelList = () => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          name: 'Current location'
-        });
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        let name = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        try {
+          const apiKey = process.env.NEXT_PUBLIC_MAPS_API_KEY;
+          if (apiKey) {
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&result_type=locality|sublocality|postal_code&key=${apiKey}`
+            );
+            const data = await res.json();
+            if (data.results?.[0]) {
+              name = data.results[0].formatted_address.split(',').slice(0, 2).join(',').trim();
+            }
+          } else {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`
+            );
+            const data = await res.json();
+            const addr = data.address;
+            name = addr?.suburb || addr?.town || addr?.city || addr?.village || name;
+          }
+        } catch {
+          // Fall back to coords — no big deal
+        }
+        setLocation({ lat: latitude, lng: longitude, name });
       },
       (error) => {
         setLocationError(error.message || 'Location permission denied');
