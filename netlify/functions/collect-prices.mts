@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import turfDistance from '@turf/distance';
 
+// Note: Prisma reads NETLIFY_DATABASE_URL from the schema
 const prisma = new PrismaClient();
 
 const FUEL_TYPE_IDS = [2, 3, 4, 5, 8, 12, 14]; // All fuel types we care about

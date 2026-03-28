@@ -6,10 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "netlify dev:exec drizzle-kit migrate",
+    "db:studio": "netlify dev:exec drizzle-kit studio"
   },
   "dependencies": {
     "@netlify/functions": "^5.1.5",
+    "@netlify/neon": "^0.1.2",
     "@prisma/client": "^6.19.2",
     "@react-google-maps/api": "^2.8.1",
     "@tanstack/react-query": "^5.62.8",
@@ -30,6 +34,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.4",
     "postcss": "^8.4.49",
