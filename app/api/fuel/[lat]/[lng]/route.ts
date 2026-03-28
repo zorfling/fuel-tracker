@@ -6,14 +6,18 @@ import Geo from 'geo-nearby';
 import { NextResponse } from 'next/server';
 
 import type { FuelEntry } from '../../../../../types/fuel';
+import { DEFAULT_FUEL_ID } from '../../../../../config/fuelTypes';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<Record<string, string | string[] | undefined>> }
 ) {
   const params = await context.params;
   const lat = Array.isArray(params.lat) ? params.lat[0] : params.lat;
   const lng = Array.isArray(params.lng) ? params.lng[0] : params.lng;
+
+  const url = new URL(request.url);
+  const fuelId = Number.parseInt(url.searchParams.get('fuelId') || String(DEFAULT_FUEL_ID), 10);
 
   const countryId = 21;
   const geoRegionId = 1;
@@ -72,7 +76,7 @@ export async function GET(
     .map((site: any) => site.i);
 
   const siteprices = (await instance.get(priceEndpoint)).data.SitePrices;
-  const unleadedPrices = siteprices.filter((site: any) => site.FuelId === 2);
+  const unleadedPrices = siteprices.filter((site: any) => site.FuelId === fuelId);
 
   const nearbyPrices: FuelEntry[] = unleadedPrices
     .filter((price: any) => nearbySites.includes(price.SiteId))

@@ -8,7 +8,9 @@ import type { FuelEntry } from '../types/fuel';
 import { useLocalStorageState } from '../utils';
 import { FuelEntryCard } from './FuelEntry';
 import { Map } from './Map';
-
+import { FUEL_TYPES, DEFAULT_FUEL_ID } from '../config/fuelTypes';
+import type { FuelTypeId } from '../config/fuelTypes';
+import { TrendBar } from './TrendBar';
 const distanceFilterKeys = [
   '250km',
   '100km',
@@ -95,6 +97,7 @@ const FuelList = () => {
   const [sevenElevenOnly, setSevenElevenOnly] = useLocalStorageState('sevenElevenOnly', false);
   const [priceLockInput, setPriceLockInput] = useLocalStorageState('priceLock', '');
   const priceLock = priceLockInput ? Number.parseFloat(priceLockInput) : null;
+  const [fuelTypeId, setFuelTypeId] = useLocalStorageState<FuelTypeId>('fuelType', DEFAULT_FUEL_ID);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
@@ -155,12 +158,12 @@ const FuelList = () => {
   }, [searchParams]);
 
   const { isLoading, data } = useQuery<FuelEntry[]>({
-    queryKey: ['GET_FUEL_LIST', location?.lat, location?.lng],
+    queryKey: ['GET_FUEL_LIST', location?.lat, location?.lng, fuelTypeId],
     queryFn: async () => {
       if (!location) {
         return [];
       }
-      const res = await fetch(`/api/fuel/${location.lat}/${location.lng}`);
+      const res = await fetch(`/api/fuel/${location.lat}/${location.lng}?fuelId=${fuelTypeId}`);
       return res.json();
     },
     enabled: Boolean(location)
@@ -383,6 +386,17 @@ const FuelList = () => {
                   </option>
                 ))}
               </select>
+              <select
+                className="rounded-2xl border bg-white px-3 py-2 text-sm font-medium dark:bg-slate-900"
+                value={fuelTypeId}
+                onChange={(e) => setFuelTypeId(Number.parseInt(e.target.value, 10) as FuelTypeId)}
+              >
+                {FUEL_TYPES.map((ft) => (
+                  <option key={ft.id} value={ft.id}>
+                    {ft.short}
+                  </option>
+                ))}
+              </select>
               <button
                 className={`rounded-2xl border px-3 py-2 text-sm font-medium transition ${
                   sevenElevenOnly
@@ -421,6 +435,12 @@ const FuelList = () => {
           )}
         </div>
       </header>
+
+      {filteredData.length > 0 && location && (
+        <div className="mx-auto max-w-5xl px-4 pt-4">
+          <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} />
+        </div>
+      )}
 
       <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1.3fr_1fr]">
         <div className="space-y-4">
