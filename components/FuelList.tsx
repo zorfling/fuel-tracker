@@ -11,6 +11,7 @@ import { Map } from './Map';
 import { FUEL_TYPES, DEFAULT_FUEL_ID } from '../config/fuelTypes';
 import type { FuelTypeId } from '../config/fuelTypes';
 import { TrendBar } from './TrendBar';
+import { filterAndSort, getEffectivePrice, getPriceTier } from '../lib/fuelFilters';
 const distanceFilterKeys = [
   '250km',
   '100km',
@@ -208,66 +209,23 @@ const FuelList = () => {
   );
 
   const filteredData = useMemo(() => {
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data
-      .filter((entry) => entry.name.toLowerCase().includes(filter.toLowerCase()))
-      .filter((entry) => !sevenElevenOnly || entry.brandId === 113)
-      .filter(
-        (entry) => entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
-      )
-      .slice()
-      .sort((a, b) => {
-        switch (sort) {
-          case 'distance':
-            return a.distance - b.distance;
-          case 'price':
-          default: {
-            // When price lock is active, sort by effective price for 7-Eleven
-            const aPrice = (priceLock && sevenElevenOnly && a.brandId === 113)
-              ? Math.max(Math.min(priceLock, a.price), a.price - 25)
-              : a.price;
-            const bPrice = (priceLock && sevenElevenOnly && b.brandId === 113)
-              ? Math.max(Math.min(priceLock, b.price), b.price - 25)
-              : b.price;
-            return aPrice - bPrice;
-          }
-        }
-      });
+    if (!data || data.length === 0) return [];
+    return filterAndSort(data, {
+      filter,
+      sort,
+      distanceFilter,
+      sevenElevenOnly,
+      priceLock,
+    });
   }, [data, distanceFilter, filter, priceLock, sevenElevenOnly, sort]);
 
   const priceTierFor = useCallback(
-    (price: number) => {
-      if (!filteredData.length) return 'mid' as const;
-      // Filter out outliers for color calc: ignore prices below 50c or above 500c
-      const sane = filteredData
-        .map((entry) => entry.price)
-        .filter((p) => p >= 50 && p < 500);
-      if (!sane.length) return 'mid' as const;
-      const min = Math.min(...sane);
-      const max = Math.max(...sane);
-      const range = max - min || 1;
-      const cheapThreshold = min + range / 3;
-      const midThreshold = min + (2 * range) / 3;
-      if (price <= cheapThreshold) return 'cheap' as const;
-      if (price <= midThreshold) return 'mid' as const;
-      return 'expensive' as const;
-    },
+    (price: number) => getPriceTier(price, filteredData),
     [filteredData]
   );
 
-  const getEffectivePrice = useCallback(
-    (entry: FuelEntry) => {
-      // Price lock only applies when 7-Eleven filter is active
-      if (!priceLock || !sevenElevenOnly || entry.brandId !== 113) return undefined;
-      // You pay the lower of: your lock price, or pump price minus 25c (max discount)
-      const maxDiscount = entry.price - 25;
-      const effective = Math.max(Math.min(priceLock, entry.price), maxDiscount);
-      // If effective equals pump price (lock is worse), don't show it
-      return effective < entry.price ? effective : undefined;
-    },
+  const getEffectivePriceForEntry = useCallback(
+    (entry: FuelEntry) => getEffectivePrice(entry, priceLock, sevenElevenOnly),
     [priceLock, sevenElevenOnly]
   );
 
@@ -491,7 +449,7 @@ const FuelList = () => {
                   className="pb-4"
                 >
                   {entry ? (
-                    <FuelEntryCard fuelEntry={entry} priceTier={priceTierFor(getEffectivePrice(entry) ?? entry.price)} effectivePrice={getEffectivePrice(entry)} />
+                    <FuelEntryCard fuelEntry={entry} priceTier={priceTierFor(getEffectivePriceForEntry(entry) ?? entry.price)} effectivePrice={getEffectivePriceForEntry(entry)} />
                   ) : null}
                 </div>
               );
