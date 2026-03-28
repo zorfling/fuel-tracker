@@ -123,8 +123,10 @@ const FuelList = () => {
 
   // Collapse header on scroll down, expand on scroll up
   useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
     const onScroll = () => {
-      const y = window.scrollY;
+      const y = el.scrollTop;
       if (y > lastScrollY.current && y > 80) {
         setHeaderCollapsed(true);
       } else if (y < lastScrollY.current) {
@@ -132,8 +134,8 @@ const FuelList = () => {
       }
       lastScrollY.current = y;
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
@@ -173,9 +175,6 @@ const FuelList = () => {
             const data = await res.json();
             const addr = data.address;
             name = addr?.suburb || addr?.town || addr?.city || addr?.village || '';
-            if (name && addr?.state) {
-              name = `${name}, ${addr.state}`;
-            }
           }
         } catch {
           // Reverse geocode failed — that's fine, just show coords
@@ -305,7 +304,7 @@ const FuelList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80 transition-all duration-300">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
@@ -449,38 +448,35 @@ const FuelList = () => {
         </div>
       </header>
 
-      {filteredData.length > 0 && location && (
-        <div className="mx-auto max-w-5xl px-4 pt-4">
-          <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} lat={location.lat} lng={location.lng} />
-          <InsightsPanel lat={location.lat} lng={location.lng} fuelTypeId={fuelTypeId} />
-        </div>
-      )}
+      <div
+        ref={parentRef}
+        className="flex-1 overflow-auto"
+        style={{ height: 'calc(100vh - 1px)' }}
+      >
+        {filteredData.length > 0 && location && (
+          <div className="mx-auto max-w-5xl px-4 pt-4 space-y-2">
+            <TrendBar data={filteredData} fuelTypeId={fuelTypeId} locationName={location.name} lat={location.lat} lng={location.lng} />
+            <InsightsPanel lat={location.lat} lng={location.lng} fuelTypeId={fuelTypeId} />
+          </div>
+        )}
 
-      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-4">
+        <div className="mx-auto max-w-5xl px-4 py-4">
           {showMap && location && (
-            <div className="rounded-2xl border bg-white/80 p-2 dark:bg-slate-900/80">
+            <div className="rounded-2xl border bg-white/80 p-2 dark:bg-slate-900/80 mb-4">
               <Map currentLocation={location} results={filteredData} priceTierFor={priceTierFor} />
             </div>
           )}
-          <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-3">
             <span>{filteredData.length} results</span>
             {isLoading && <span>Updating prices…</span>}
             {!isLoading && dataUpdatedAt > 0 && (
               <span>Updated {new Date(dataUpdatedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}</span>
             )}
           </div>
-        </div>
 
-        {isLoading && !filteredData.length ? (
-          <div className="p-4">
+          {isLoading && !filteredData.length ? (
             <FuelListSkeleton />
-          </div>
-        ) : (
-        <div
-          ref={parentRef}
-          className="h-[70vh] overflow-auto rounded-2xl border bg-white/60 p-4 dark:bg-slate-900/60"
-        >
+          ) : (
           <div
             style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
             className="relative"
@@ -512,8 +508,8 @@ const FuelList = () => {
               </div>
             )}
           </div>
+          )}
         </div>
-        )}
       </div>
     </div>
   );
