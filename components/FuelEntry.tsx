@@ -1,44 +1,20 @@
-import React from 'react';
-import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
-import styled from 'styled-components';
+'use client';
+
 import Image from 'next/image';
+import type { FuelEntry } from '../types/fuel';
 
 interface Props {
   fuelEntry: FuelEntry;
-  className?: string;
+  priceTier: 'cheap' | 'mid' | 'expensive';
 }
 
-const Card = styled.div`
-  border: 1px solid #333;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-  padding: 1rem;
-  margin-top: 1rem;
-  display: flex;
-  justify-content: space-between;
-`;
+const priceStyles: Record<Props['priceTier'], string> = {
+  cheap: 'text-emerald-500',
+  mid: 'text-amber-500',
+  expensive: 'text-rose-500'
+};
 
-const Name = styled.h2`
-  padding: 0;
-  margin: 0;
-`;
-const Price = styled.h2`
-  font-size: 2rem;
-  padding: 0;
-  margin: 0 0 1rem;
-`;
-const Address = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-`;
-const PriceContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`;
-
-export const FuelEntryCard = ({ fuelEntry, className }: Props) => {
+export const FuelEntryCard = ({ fuelEntry, priceTier }: Props) => {
   const {
     name,
     address,
@@ -48,59 +24,41 @@ export const FuelEntryCard = ({ fuelEntry, className }: Props) => {
     brandLogo,
     lastUpdated
   } = fuelEntry;
+
   return (
-    <Card className={className}>
-      <Address>
-        <Name>{name}</Name>
-        <div>
+    <div className="rounded-2xl border bg-white/80 dark:bg-slate-900/80 p-4 shadow-sm backdrop-blur transition hover:shadow-md">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+            {name}
+          </h3>
           <a
+            className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             href={`https://www.google.com.au/maps/search/${name}+${address}+${postcode}`}
             target="_blank"
             rel="noreferrer"
           >
-            {address} {[postcode]}
+            {address} {postcode}
           </a>
-
-          <div>{distanceString}</div>
-          <div>Last updated: {lastUpdated}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {distanceString} • Updated {lastUpdated}
+          </div>
         </div>
-      </Address>
-      <PriceContainer>
-        <Price>{price}</Price>
-        <div
-          style={{
-            minHeight: '100px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Image src={brandLogo} width={100} height={100} alt="brand logo" />
+        <div className="flex flex-col items-end gap-2">
+          <div className={`text-3xl font-bold ${priceStyles[priceTier]}`}>
+            {price.toFixed(1)}
+          </div>
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 p-2 dark:bg-slate-800">
+            <Image
+              src={brandLogo}
+              width={56}
+              height={56}
+              alt={`${name} brand logo`}
+              className="object-contain"
+            />
+          </div>
         </div>
-      </PriceContainer>
-
-      {/* <dl>
-        <dt>Name</dt>
-        <dd>{name}</dd>
-        <dt>Address</dt>
-        <dd>
-          <a
-            href={`https://www.google.com.au/maps/search/${name}+${address}+${postcode}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {address}
-          </a>
-        </dd>
-        <dt>Postcode</dt>
-        <dd>{postcode}</dd>
-        <dt>Distance</dt>
-        <dd>{distanceString}</dd>
-        <dt>Price</dt>
-        <dd>{price}</dd>
-        <dt>Last Updated</dt>
-        <dd>{lastUpdated}</dd>
-      </dl> */}
-    </Card>
+      </div>
+    </div>
   );
 };

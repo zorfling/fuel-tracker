@@ -1,33 +1,13 @@
-import React, { ChangeEventHandler, useCallback, useMemo, useRef } from 'react';
-import { useQuery } from 'react-query';
-import { useVirtual } from 'react-virtual';
-import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
+'use client';
+
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import React, { ChangeEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import type { FuelEntry } from '../types/fuel';
 import { useLocalStorageState } from '../utils';
 import { FuelEntryCard } from './FuelEntry';
 import { Map } from './Map';
-import { useLocation } from './useLocation';
-
-interface Props {}
-
-const Location = ({
-  currentLocation
-}: {
-  currentLocation: GeolocationPosition | null;
-}) =>
-  !currentLocation ? (
-    <></>
-  ) : (
-    <div>
-      Your location is:{' '}
-      <a
-        href={`https://www.google.com.au/maps/search/${currentLocation?.coords.latitude},${currentLocation?.coords.longitude}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {currentLocation?.coords.latitude}, {currentLocation?.coords.longitude}
-      </a>
-    </div>
-  );
 
 const distanceFilterKeys = [
   '250km',
@@ -39,55 +19,156 @@ const distanceFilterKeys = [
   '5km',
   '1km'
 ] as const;
-type DistanceFilter = typeof distanceFilterKeys[number];
 
-const FuelList = (props: Props) => {
-  const currentLocation = useLocation();
-  const { isLoading, data } = useQuery<FuelEntry[]>(
-    ['GET_FUEL_LIST', currentLocation],
-    async () => {
-      if (currentLocation) {
-        const res = await fetch(
-          `/api/fuel/${currentLocation?.coords.latitude}/${currentLocation?.coords.longitude}`
-        );
-        return await res.json();
-      }
-      return Promise.resolve([]);
-    }
+type DistanceFilter = (typeof distanceFilterKeys)[number];
+type SortField = 'price' | 'distance';
+
+type LocationState = {
+  lat: number;
+  lng: number;
+  name: string;
+};
+
+const formatLocationName = (location: LocationState | null) => {
+  if (!location) return 'Finding your location…';
+  return location.name || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`;
+};
+
+const buildShareUrl = (origin: string, pathname: string, location: LocationState) => {
+  const params = new URLSearchParams({
+    lat: location.lat.toString(),
+    lng: location.lng.toString(),
+    name: location.name
+  });
+  return `${origin}${pathname}?${params.toString()}`;
+};
+
+const geocodeWithGoogle = async (query: string, apiKey: string) => {
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
   );
+  const data = await response.json();
+  if (!data.results || data.results.length === 0) {
+    throw new Error('No results found');
+  }
+  const result = data.results[0];
+  return {
+    lat: result.geometry.location.lat,
+    lng: result.geometry.location.lng,
+    name: result.formatted_address
+  };
+};
+
+const geocodeWithNominatim = async (query: string) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
+  );
+  const data = await response.json();
+  if (!data || data.length === 0) {
+    throw new Error('No results found');
+  }
+  return {
+    lat: Number.parseFloat(data[0].lat),
+    lng: Number.parseFloat(data[0].lon),
+    name: data[0].display_name
+  };
+};
+
+const FuelList = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [location, setLocation] = useState<LocationState | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const [filter, setFilter] = useLocalStorageState('filter', '');
-  const onChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
+  const [sort, setSort] = useLocalStorageState<SortField>('sort', 'price');
+  const [distanceFilter, setDistanceFilter] = useLocalStorageState<DistanceFilter>(
+    'distanceFilter',
+    '10km'
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setShowMap(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const latParam = searchParams.get('lat');
+    const lngParam = searchParams.get('lng');
+    const nameParam = searchParams.get('name');
+
+    if (latParam && lngParam) {
+      const parsedLat = Number.parseFloat(latParam);
+      const parsedLng = Number.parseFloat(lngParam);
+      if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
+        setLocation({
+          lat: parsedLat,
+          lng: parsedLng,
+          name: nameParam ? decodeURIComponent(nameParam) : ''
+        });
+        return;
+      }
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not available');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          name: 'Current location'
+        });
+      },
+      (error) => {
+        setLocationError(error.message || 'Location permission denied');
+      }
+    );
+  }, [searchParams]);
+
+  const { isLoading, data } = useQuery<FuelEntry[]>({
+    queryKey: ['GET_FUEL_LIST', location?.lat, location?.lng],
+    queryFn: async () => {
+      if (!location) {
+        return [];
+      }
+      const res = await fetch(`/api/fuel/${location.lat}/${location.lng}`);
+      return res.json();
+    },
+    enabled: Boolean(location)
+  });
+
+  const onChangeFilter = useCallback<ChangeEventHandler<HTMLInputElement>>(
     (evt) => {
       setFilter(evt.target.value);
     },
     [setFilter]
   );
 
-  type SortField = 'price' | 'distance';
-  const [sort, setSort] = useLocalStorageState<SortField>('sort', 'price');
   const onChangeSort = useCallback<ChangeEventHandler<HTMLSelectElement>>(
     (evt) => {
-      const isSortField = (field: string): field is SortField =>
-        field === 'distance' || field === 'price';
-      const field = evt.target.value;
-      if (isSortField(field)) {
+      const field = evt.target.value as SortField;
+      if (field === 'distance' || field === 'price') {
         setSort(field);
       }
     },
     [setSort]
   );
 
-  const [distanceFilter, setDistanceFilter] =
-    useLocalStorageState<DistanceFilter>('distanceFilter', '10km');
-  const onChangeDistanceFilter = useCallback<
-    ChangeEventHandler<HTMLSelectElement>
-  >(
+  const onChangeDistanceFilter = useCallback<ChangeEventHandler<HTMLSelectElement>>(
     (evt) => {
-      const isDistanceFilter = (field: string): field is DistanceFilter =>
-        distanceFilterKeys.includes(field as DistanceFilter);
-      const field = evt.target.value;
-      if (isDistanceFilter(field)) {
+      const field = evt.target.value as DistanceFilter;
+      if (distanceFilterKeys.includes(field)) {
         setDistanceFilter(field);
       }
     },
@@ -100,12 +181,9 @@ const FuelList = (props: Props) => {
     }
 
     return data
-      .filter((entry) =>
-        entry.name.toLowerCase().includes(filter.toLowerCase())
-      )
+      .filter((entry) => entry.name.toLowerCase().includes(filter.toLowerCase()))
       .filter(
-        (entry) =>
-          entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
+        (entry) => entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
       )
       .sort((a, b) => {
         switch (sort) {
@@ -118,83 +196,205 @@ const FuelList = (props: Props) => {
       });
   }, [data, distanceFilter, filter, sort]);
 
-  const theWindow = typeof window !== 'undefined' ? window : null;
+  const priceTierFor = useCallback(
+    (price: number) => {
+      if (!filteredData.length) return 'mid' as const;
+      const prices = filteredData.map((entry) => entry.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const range = max - min || 1;
+      const cheapThreshold = min + range / 3;
+      const midThreshold = min + (2 * range) / 3;
+      if (price <= cheapThreshold) return 'cheap' as const;
+      if (price <= midThreshold) return 'mid' as const;
+      return 'expensive' as const;
+    },
+    [filteredData]
+  );
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const rowVirtualizer = useVirtual({
-    size: filteredData.length,
-    parentRef,
-    overscan: 5,
-    windowRef: useRef(theWindow)
+  const rowVirtualizer = useVirtualizer({
+    count: filteredData.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 140,
+    overscan: 6
   });
 
-  if (isLoading || !currentLocation) {
+  const handleShare = async () => {
+    if (!location || typeof window === 'undefined') return;
+    const shareUrl = buildShareUrl(window.location.origin, pathname, location);
+    try {
+      setIsSharing(true);
+      await navigator.clipboard.writeText(shareUrl);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleSearch = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!searchInput.trim()) return;
+
+    setIsGeocoding(true);
+    setLocationError(null);
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_MAPS_API_KEY;
+      const result = apiKey
+        ? await geocodeWithGoogle(searchInput, apiKey)
+        : await geocodeWithNominatim(searchInput);
+
+      setLocation(result);
+      const params = new URLSearchParams({
+        lat: result.lat.toString(),
+        lng: result.lng.toString(),
+        name: result.name
+      });
+      router.replace(`${pathname}?${params.toString()}`);
+    } catch (error) {
+      setLocationError(
+        error instanceof Error ? error.message : 'Unable to find that location'
+      );
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  if (locationError) {
     return (
-      <div>
-        Loading...
-        <Location currentLocation={currentLocation} />
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="rounded-2xl border bg-white p-6 text-center shadow-sm dark:bg-slate-900">
+          <div className="text-lg font-semibold">Location error</div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{locationError}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div>
-        <Map currentLocation={currentLocation} results={filteredData} />
-        <br />
-        <br />
-        <label>
-          Filter: <input type="text" onChange={onChange} value={filter} />
-        </label>
-        <br />
-        <label>
-          Sort by:{' '}
-          <select onChange={onChangeSort} value={sort}>
-            {['Distance', 'Price'].map((option) => (
-              <option key={option.toLowerCase()} value={option.toLowerCase()}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-        <br />
-        <label>
-          Distance less than:{' '}
-          <select onChange={onChangeDistanceFilter} value={distanceFilter}>
-            {distanceFilterKeys.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div ref={parentRef} style={{ width: '400px' }}>
-        <div
-          style={{
-            height: `${rowVirtualizer.totalSize}px`,
-            width: '100%',
-            position: 'relative'
-          }}
-        >
-          {rowVirtualizer.virtualItems.map((virtualRow) => (
-            <div
-              key={virtualRow.key}
-              ref={virtualRow.measureRef}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualRow.start}px)`
-              }}
-            >
-              <FuelEntryCard
-                key={filteredData[virtualRow.index].id}
-                fuelEntry={filteredData[virtualRow.index]}
-              />
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80">
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Fuel Tracker</div>
+            <div className="text-xl font-semibold text-slate-900 dark:text-white">
+              {formatLocationName(location)}
             </div>
-          ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="rounded-full border px-3 py-1 text-sm font-medium text-slate-600 hover:border-slate-400 dark:text-slate-300"
+              onClick={() => setShowMap((prev) => !prev)}
+            >
+              {showMap ? 'Hide map' : 'Show map'}
+            </button>
+            <button
+              className="rounded-full bg-brand-500 px-3 py-1 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-70"
+              onClick={handleShare}
+              disabled={!location || isSharing}
+            >
+              {isSharing ? 'Copied!' : 'Share this location'}
+            </button>
+          </div>
+        </div>
+        <div className="mx-auto max-w-5xl px-4 pb-4">
+          <form className="flex flex-col gap-3 md:flex-row md:items-center" onSubmit={handleSearch}>
+            <div className="flex flex-1 items-center gap-2 rounded-2xl border bg-white px-3 py-2 dark:bg-slate-900">
+              <input
+                className="flex-1 bg-transparent text-sm outline-none"
+                placeholder="Search a suburb, postcode, or address"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+              />
+              <button
+                className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-white dark:text-slate-900"
+                type="submit"
+                disabled={isGeocoding}
+              >
+                {isGeocoding ? 'Searching…' : 'Search'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="rounded-2xl border bg-white px-3 py-2 text-sm dark:bg-slate-900">
+                <input
+                  className="w-32 bg-transparent text-sm outline-none"
+                  placeholder="Filter brand"
+                  value={filter}
+                  onChange={onChangeFilter}
+                />
+              </div>
+              <select
+                className="rounded-2xl border bg-white px-3 py-2 text-sm dark:bg-slate-900"
+                onChange={onChangeSort}
+                value={sort}
+              >
+                <option value="price">Cheapest</option>
+                <option value="distance">Closest</option>
+              </select>
+              <select
+                className="rounded-2xl border bg-white px-3 py-2 text-sm dark:bg-slate-900"
+                onChange={onChangeDistanceFilter}
+                value={distanceFilter}
+              >
+                {distanceFilterKeys.map((option) => (
+                  <option key={option} value={option}>
+                    Within {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1.3fr_1fr]">
+        <div className="space-y-4">
+          {showMap && location && (
+            <div className="rounded-2xl border bg-white/80 p-2 dark:bg-slate-900/80">
+              <Map currentLocation={location} results={filteredData} priceTierFor={priceTierFor} />
+            </div>
+          )}
+          <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+            <span>{filteredData.length} results</span>
+            {isLoading && <span>Updating prices…</span>}
+          </div>
+        </div>
+
+        <div
+          ref={parentRef}
+          className="h-[70vh] overflow-auto rounded-2xl border bg-white/60 p-4 dark:bg-slate-900/60"
+        >
+          <div
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            className="relative"
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const entry = filteredData[virtualRow.index];
+              return (
+                <div
+                  key={virtualRow.key}
+                  ref={rowVirtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`
+                  }}
+                  className="pb-4"
+                >
+                  {entry ? (
+                    <FuelEntryCard fuelEntry={entry} priceTier={priceTierFor(entry.price)} />
+                  ) : null}
+                </div>
+              );
+            })}
+            {!filteredData.length && !isLoading && (
+              <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+                No stations match your filters.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

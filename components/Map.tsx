@@ -1,65 +1,72 @@
+'use client';
+
 import {
   GoogleMap,
-  GoogleMapProps,
   InfoWindow,
   Marker,
   useJsApiLoader
 } from '@react-google-maps/api';
-import { memo, useCallback, useState } from 'react';
-import styled from 'styled-components';
+import { memo, useCallback, useMemo, useState } from 'react';
 
-import { FuelEntry } from '../pages/api/fuel/[lat]/[lng]';
+import type { FuelEntry } from '../types/fuel';
 import { FuelEntryCard } from './FuelEntry';
 
 interface MapProps {
-  currentLocation: GeolocationPosition;
+  currentLocation: { lat: number; lng: number };
   results: FuelEntry[];
+  priceTierFor: (price: number) => 'cheap' | 'mid' | 'expensive';
 }
 
 const containerStyle = {
-  width: '400px',
-  height: '400px'
+  width: '100%',
+  height: '320px'
 };
 
-const StyledFuelEntryCard = styled(FuelEntryCard)`
-  margin-top: 0;
-  border: none;
-`;
-export const Map = memo(({ currentLocation, results }: MapProps) => {
+export const Map = memo(({ currentLocation, results, priceTierFor }: MapProps) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_MAPS_API_KEY ?? ''
   });
-  const [map, setMap] = useState<GoogleMapProps | null>(null);
-
   const [showInfo, setShowInfo] = useState<FuelEntry>();
-  const onLoad = useCallback(function callback(map) {
-    google.maps.event.addListener(map, 'click', function () {
-      setShowInfo(undefined);
-    });
+  const [map, setMap] = useState<google.maps.Map | null>(null);
 
-    setMap(map);
-  }, []);
+  const { latitude, longitude } = useMemo(
+    () => ({
+      latitude: currentLocation.lat,
+      longitude: currentLocation.lng
+    }),
+    [currentLocation]
+  );
 
-  const onUnmount = useCallback(function callback(map) {
-    setMap(null);
-  }, []);
-
-  const { latitude, longitude } = currentLocation.coords;
   const [mapCentre, setMapCentre] = useState<
     google.maps.LatLng | google.maps.LatLngLiteral | undefined
   >({ lat: latitude, lng: longitude });
 
-  return isLoaded ? (
+  const onLoad = useCallback(function callback(mapInstance: google.maps.Map) {
+    google.maps.event.addListener(mapInstance, 'click', function () {
+      setShowInfo(undefined);
+    });
+    setMap(mapInstance);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="rounded-2xl border bg-white/70 p-4 text-sm text-slate-500 dark:bg-slate-900/70 dark:text-slate-400">
+        Map loading…
+      </div>
+    );
+  }
+
+  return (
     <GoogleMap
       zoom={12}
       center={mapCentre}
       onLoad={onLoad}
-      onUnmount={onUnmount}
+      onUnmount={() => setMap(null)}
       mapContainerStyle={containerStyle}
       onCenterChanged={() => {
-        const centre = map?.center;
-        if (!map || !centre) {
+        const centre = map?.getCenter();
+        if (!centre) {
           return;
         }
         setMapCentre(centre);
@@ -72,19 +79,18 @@ export const Map = memo(({ currentLocation, results }: MapProps) => {
         }}
         icon="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
       ></Marker>
-      {results &&
-        results.map((fuelEntry, idx) => (
-          <Marker
-            key={idx}
-            position={{
-              lat: fuelEntry.lat,
-              lng: fuelEntry.lng
-            }}
-            label={`${idx + 1}`}
-            title={fuelEntry.name}
-            onClick={() => setShowInfo(fuelEntry)}
-          />
-        ))}
+      {results.map((fuelEntry, idx) => (
+        <Marker
+          key={`${fuelEntry.id}-${idx}`}
+          position={{
+            lat: fuelEntry.lat,
+            lng: fuelEntry.lng
+          }}
+          label={`${idx + 1}`}
+          title={fuelEntry.name}
+          onClick={() => setShowInfo(fuelEntry)}
+        />
+      ))}
       {showInfo && (
         <InfoWindow
           position={{
@@ -96,11 +102,16 @@ export const Map = memo(({ currentLocation, results }: MapProps) => {
           }}
           onCloseClick={() => setShowInfo(undefined)}
         >
-          <StyledFuelEntryCard fuelEntry={showInfo} />
+          <div className="w-64">
+            <FuelEntryCard
+              fuelEntry={showInfo}
+              priceTier={priceTierFor(showInfo.price)}
+            />
+          </div>
         </InfoWindow>
       )}
     </GoogleMap>
-  ) : (
-    <div>Map not loaded</div>
   );
 });
+
+Map.displayName = 'Map';

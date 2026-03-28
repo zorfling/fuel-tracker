@@ -5,31 +5,32 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "next export",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.8.1",
+    "@tanstack/react-query": "^5.62.8",
+    "@tanstack/react-virtual": "^3.11.1",
     "@turf/distance": "^6.5.0",
-    "axios": "^0.24.0",
-    "date-fns": "^2.25.0",
+    "axios": "^1.7.9",
+    "date-fns": "^2.30.0",
     "geo-nearby": "^2.0.1",
-    "next": "^12.0.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-query": "^3.31.0",
-    "react-virtual": "^2.10.0",
-    "styled-components": "^5.3.3"
+    "next": "^15.0.4",
+    "next-pwa": "^5.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^4.0.0-beta.4",
-    "@types/node": "16.11.6",
-    "@types/react": "17.0.33",
-    "@types/styled-components": "^5.1.19",
-    "babel-plugin-styled-components": "^2.0.2",
-    "eslint": "7",
-    "eslint-config-next": "12.0.1",
-    "typescript": "4.4.4"
+    "@netlify/plugin-nextjs": "^4.41.3",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.0.4",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.7.2"
   }
 }
