@@ -218,6 +218,7 @@ const FuelList = () => {
       .filter(
         (entry) => entry.distance <= Number.parseFloat(distanceFilter.split('km')[0])
       )
+      .slice()
       .sort((a, b) => {
         switch (sort) {
           case 'distance':
@@ -267,7 +268,7 @@ const FuelList = () => {
       // If effective equals pump price (lock is worse), don't show it
       return effective < entry.price ? effective : undefined;
     },
-    [priceLock]
+    [priceLock, sevenElevenOnly]
   );
 
   const parentRef = useRef<HTMLDivElement>(null);
