@@ -17,9 +17,26 @@ model TrackedLocation {
   updatedAt DateTime @updatedAt
 
   snapshots PriceSnapshot[]
+  alerts   PriceAlert[]
 
   @@unique([latQ, lngQ])
   @@index([latQ, lngQ])
+}
+
+model PriceAlert {
+  id            String   @id @default(cuid())
+  locationId    String
+  fuelTypeId    Int
+  threshold     Float    // cents per litre — alert when cheapest drops below this
+  enabled       Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  location TrackedLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, fuelTypeId])
+  @@index([enabled])
 }
 
 model PriceSnapshot {

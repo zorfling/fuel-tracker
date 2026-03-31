@@ -14,6 +14,7 @@ import { TrendBar } from './TrendBar';
 import { FuelListSkeleton } from './FuelCardSkeleton';
 import { InsightsPanel } from './InsightsPanel';
 import { SavedLocations } from './SavedLocations';
+import { PriceAlerts } from './PriceAlerts';
 import { filterAndSort, getEffectivePrice, getPriceTier } from '../lib/fuelFilters';
 const distanceFilterKeys = [
   '250km',
@@ -383,6 +384,7 @@ const FuelList = () => {
               {showMap ? 'Hide map' : 'Show map'}
             </button>
             <SavedLocations currentLocation={location} onSelectLocation={handleSelectLocation} />
+            <PriceAlerts />
             <button
               className="rounded-full bg-brand-500 px-3 py-1 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-70"
               onClick={handleShare}
