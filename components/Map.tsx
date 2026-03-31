@@ -49,11 +49,16 @@ export const Map = memo(({ currentLocation, results, priceTierFor }: MapProps) =
     setMap(mapInstance);
   }, []);
 
-  // Only re-center when location actually changes (not during drag)
-  const prevCenter = useRef(center);
-  if (center.lat !== prevCenter.current.lat || center.lng !== prevCenter.current.lng) {
-    prevCenter.current = center;
-    userDragging.current = false; // Reset drag flag so map re-centers for new location
+  // Reset drag flag and pan map when location changes
+  const prevLocationKey = useRef(`${currentLocation.lat},${currentLocation.lng}`);
+  const locationKey = `${currentLocation.lat},${currentLocation.lng}`;
+  if (locationKey !== prevLocationKey.current) {
+    prevLocationKey.current = locationKey;
+    userDragging.current = false;
+    // Imperatively pan if map is already loaded
+    if (map) {
+      map.panTo(center);
+    }
   }
 
   if (!isLoaded) {
