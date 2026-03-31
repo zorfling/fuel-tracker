@@ -3,15 +3,22 @@ import type { Config } from '@netlify/functions';
 export default async function handler() {
   // URL is injected by Netlify even in standalone functions
   const siteUrl = process.env.URL || 'https://zorfling-fuel-tracker.netlify.app';
+  const cronKey = 'fuel_cron_Xk9mP2wR7vNj';
 
-  // Call the Next.js API route which has access to all env vars
-  // Use a static key since env vars aren't available in standalone functions
-  const res = await fetch(`${siteUrl}/api/cron/collect-prices?key=fuel_cron_Xk9mP2wR7vNj`);
-  const data = await res.text();
+  // 1. Collect prices
+  const collectRes = await fetch(`${siteUrl}/api/cron/collect-prices?key=${cronKey}`);
+  const collectData = await collectRes.text();
+  console.log(`Collect prices: ${collectRes.status} ${collectData}`);
 
-  console.log(`Collect prices response: ${res.status} ${data}`);
+  // 2. Check alerts after collection
+  const alertRes = await fetch(`${siteUrl}/api/cron/check-alerts?key=${cronKey}`);
+  const alertData = await alertRes.text();
+  console.log(`Check alerts: ${alertRes.status} ${alertData}`);
 
-  return new Response(data, { status: res.status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify({
+    collect: JSON.parse(collectData),
+    alerts: JSON.parse(alertData),
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
 // Run every 6 hours
