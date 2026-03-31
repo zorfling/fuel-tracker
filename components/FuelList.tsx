@@ -256,6 +256,36 @@ const FuelList = () => {
     overscan: 6
   });
 
+  const handleResetToMyLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        let name = '';
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`,
+            { headers: { 'Accept': 'application/json' } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address;
+            name = addr?.suburb || addr?.town || addr?.city || addr?.village || '';
+          }
+        } catch {
+          // fine
+        }
+        const loc = { lat: latitude, lng: longitude, name: name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` };
+        setLocation(loc);
+        const params = new URLSearchParams({ lat: loc.lat.toString(), lng: loc.lng.toString(), name: loc.name });
+        router.replace(`${pathname}?${params.toString()}`);
+      },
+      () => {
+        // permission denied — do nothing
+      }
+    );
+  }, [pathname, router]);
+
   const handleShare = async () => {
     if (!location || typeof window === 'undefined') return;
     const shareUrl = buildShareUrl(window.location.origin, pathname, location);
@@ -472,7 +502,7 @@ const FuelList = () => {
         <div className="mx-auto max-w-5xl px-4 py-4">
           {showMap && location && (
             <div className="rounded-2xl border bg-white/80 p-2 dark:bg-slate-900/80 mb-4">
-              <Map currentLocation={location} results={filteredData} priceTierFor={priceTierFor} />
+              <Map currentLocation={location} results={filteredData} priceTierFor={priceTierFor} onRecenter={handleResetToMyLocation} />
             </div>
           )}
           <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-3">
