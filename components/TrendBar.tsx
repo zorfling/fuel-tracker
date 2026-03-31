@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FuelEntry } from '../types/fuel';
 
 type PriceSnapshot = {
@@ -94,6 +94,7 @@ interface TrendBarProps {
 
 export function TrendBar({ data, fuelTypeId, locationName, lat, lng }: TrendBarProps) {
   const [isTracking, setIsTracking] = useState(false);
+  const queryClient = useQueryClient();
 
   const sanePrices = useMemo(
     () => data.map((e) => e.price).filter((p) => p >= 50 && p < 500).sort((a, b) => a - b),
@@ -155,6 +156,7 @@ export function TrendBar({ data, fuelTypeId, locationName, lat, lng }: TrendBarP
         body: JSON.stringify({ lat, lng, name: locationName }),
       });
       await refetchTrends();
+      queryClient.invalidateQueries({ queryKey: ['savedLocations'] });
     } finally {
       setIsTracking(false);
     }
@@ -166,6 +168,7 @@ export function TrendBar({ data, fuelTypeId, locationName, lat, lng }: TrendBarP
     try {
       await fetch(`/api/locations?id=${trendsData.locationId}`, { method: 'DELETE' });
       await refetchTrends();
+      queryClient.invalidateQueries({ queryKey: ['savedLocations'] });
     } finally {
       setIsTracking(false);
     }

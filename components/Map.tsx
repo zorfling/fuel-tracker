@@ -6,7 +6,7 @@ import {
   Marker,
   useJsApiLoader
 } from '@react-google-maps/api';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import type { FuelEntry } from '../types/fuel';
 import { FuelEntryCard } from './FuelEntry';
@@ -29,25 +29,32 @@ export const Map = memo(({ currentLocation, results, priceTierFor }: MapProps) =
   });
   const [showInfo, setShowInfo] = useState<FuelEntry>();
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const userDragging = useRef(false);
 
-  const { latitude, longitude } = useMemo(
-    () => ({
-      latitude: currentLocation.lat,
-      longitude: currentLocation.lng
-    }),
-    [currentLocation]
+  const center = useMemo(
+    () => ({ lat: currentLocation.lat, lng: currentLocation.lng }),
+    [currentLocation.lat, currentLocation.lng]
   );
-
-  const [mapCentre, setMapCentre] = useState<
-    google.maps.LatLng | google.maps.LatLngLiteral | undefined
-  >({ lat: latitude, lng: longitude });
 
   const onLoad = useCallback(function callback(mapInstance: google.maps.Map) {
     google.maps.event.addListener(mapInstance, 'click', function () {
       setShowInfo(undefined);
     });
+    google.maps.event.addListener(mapInstance, 'dragstart', function () {
+      userDragging.current = true;
+    });
+    google.maps.event.addListener(mapInstance, 'dragend', function () {
+      userDragging.current = true;
+    });
     setMap(mapInstance);
   }, []);
+
+  // Only re-center when location actually changes (not during drag)
+  const prevCenter = useRef(center);
+  if (center.lat !== prevCenter.current.lat || center.lng !== prevCenter.current.lng) {
+    prevCenter.current = center;
+    userDragging.current = false; // Reset drag flag so map re-centers for new location
+  }
 
   if (!isLoaded) {
     return (
@@ -60,23 +67,13 @@ export const Map = memo(({ currentLocation, results, priceTierFor }: MapProps) =
   return (
     <GoogleMap
       zoom={12}
-      center={mapCentre}
+      center={userDragging.current ? undefined : center}
       onLoad={onLoad}
       onUnmount={() => setMap(null)}
       mapContainerStyle={containerStyle}
-      onCenterChanged={() => {
-        const centre = map?.getCenter();
-        if (!centre) {
-          return;
-        }
-        setMapCentre(centre);
-      }}
     >
       <Marker
-        position={{
-          lat: latitude,
-          lng: longitude
-        }}
+        position={center}
         icon="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
       ></Marker>
       {results.map((fuelEntry, idx) => (
