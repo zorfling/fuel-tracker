@@ -56,6 +56,19 @@ export function PriceAlerts() {
   const locationList = useMemo(() => locations ?? [], [locations]);
   const activeCount = useMemo(() => alertList.filter((alert) => alert.enabled).length, [alertList]);
 
+  // Show badge only when an alert was recently triggered (last 6 hours)
+  const recentlyTriggered = useMemo(() => {
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    return alertList.filter(
+      (alert) =>
+        alert.enabled &&
+        alert.lastTriggered &&
+        new Date(alert.lastTriggered).getTime() > sixHoursAgo &&
+        alert.currentPrice != null &&
+        alert.currentPrice <= alert.threshold
+    ).length;
+  }, [alertList]);
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const parsedThreshold = Number(threshold);
@@ -151,9 +164,9 @@ export function PriceAlerts() {
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         Alerts
-        {activeCount > 0 && (
+        {recentlyTriggered > 0 && (
           <span className="absolute -top-1 -right-1 rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
-            {activeCount}
+            {recentlyTriggered}
           </span>
         )}
       </button>
