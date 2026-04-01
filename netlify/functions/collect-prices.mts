@@ -21,7 +21,7 @@ export default async function handler() {
   }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
-// Run every 6 hours
+// Run every 3 hours
 export const config: Config = {
-  schedule: '0 */6 * * *',
+  schedule: '0 */3 * * *',
 };

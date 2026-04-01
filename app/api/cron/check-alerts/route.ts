@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json([]);
   }
 
-  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const now = new Date();
   const triggered: Array<{
     alertId: string;
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     const shouldTrigger =
       snapshot.cheapest <= alert.threshold &&
-      (!alert.lastTriggered || alert.lastTriggered < sixHoursAgo);
+      (!alert.lastTriggered || alert.lastTriggered < threeHoursAgo);
 
     if (!shouldTrigger) continue;
 
