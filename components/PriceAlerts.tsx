@@ -172,7 +172,7 @@ export function PriceAlerts() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-96 rounded-2xl border bg-white p-3 shadow-lg dark:bg-slate-900">
+        <div className="fixed inset-x-3 top-auto mt-2 sm:absolute sm:inset-x-auto sm:right-0 w-auto sm:w-96 rounded-2xl border bg-white p-3 shadow-lg dark:bg-slate-900 z-50">
           <div className="text-xs uppercase tracking-[0.2em] text-slate-400 px-2 pb-2">
             Price alerts
           </div>
