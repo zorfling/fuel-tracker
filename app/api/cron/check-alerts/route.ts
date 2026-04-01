@@ -74,5 +74,26 @@ export async function GET(request: Request) {
     });
   }
 
+  // Send Telegram notification if any alerts triggered
+  if (triggered.length > 0) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (botToken && chatId) {
+      const lines = triggered.map(
+        (t) => `⛽ ${t.fuelTypeName} at ${t.locationName} dropped to ${t.currentPrice.toFixed(1)}¢ (your target: ${t.threshold}¢)`
+      );
+      const message = `🔔 Fuel Price Alert!\n\n${lines.join('\n')}`;
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: message }),
+        });
+      } catch (err) {
+        console.error('Failed to send Telegram notification:', err);
+      }
+    }
+  }
+
   return NextResponse.json(triggered);
 }
