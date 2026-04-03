@@ -6,7 +6,9 @@ import Geo from 'geo-nearby';
 import { NextResponse } from 'next/server';
 
 import type { FuelEntry } from '../../../../../types/fuel';
-import { DEFAULT_FUEL_ID } from '../../../../../config/fuelTypes';
+import { DEFAULT_FUEL_ID, FUEL_TYPES } from '../../../../../config/fuelTypes';
+import { getNswFuelNearby } from '../../../../../lib/nsw-fuel';
+import { getState } from '../../../../../lib/stateDetection';
 
 export async function GET(
   request: Request,
@@ -18,6 +20,64 @@ export async function GET(
 
   const url = new URL(request.url);
   const fuelId = Number.parseInt(url.searchParams.get('fuelId') || String(DEFAULT_FUEL_ID), 10);
+
+  if (!lat || !lng) {
+    return NextResponse.json([], { status: 400 });
+  }
+
+  const currentLocation = {
+    lat: Number.parseFloat(lat),
+    lng: Number.parseFloat(lng)
+  };
+
+  const state = getState(currentLocation.lat, currentLocation.lng);
+
+  if (state === 'NSW') {
+    const fuelType = FUEL_TYPES.find(type => type.id === fuelId);
+    if (!fuelType?.nswCode) {
+      return NextResponse.json([], { status: 400 });
+    }
+
+    const { stations, prices } = await getNswFuelNearby(
+      currentLocation.lat,
+      currentLocation.lng,
+      15,
+      fuelType.nswCode
+    );
+
+    const stationsByCode = new Map(stations.map(station => [station.code, station]));
+    const entries: FuelEntry[] = prices
+      .map(price => {
+        const station = stationsByCode.get(price.stationcode);
+        if (!station) return null;
+        const postcodeMatch = station.address.match(/(\d{4})(?!.*\d{4})/);
+        const postcode = postcodeMatch ? postcodeMatch[1] : '';
+        const distance = station.location.distance;
+
+        return {
+          id: station.code,
+          name: station.name,
+          address: station.address,
+          postcode,
+          distance,
+          distanceString: `${distance.toFixed(2)} km`,
+          price: price.price,
+          brandId: Number.parseInt(station.brandid, 10) || 0,
+          brandLogo: '',
+          lastUpdated: price.lastupdated,
+          lat: station.location.latitude,
+          lng: station.location.longitude
+        };
+      })
+      .filter((entry): entry is FuelEntry => Boolean(entry))
+      .sort((a, b) => (a.distance < b.distance ? -1 : 1));
+
+    return NextResponse.json(entries);
+  }
+
+  if (state !== 'QLD') {
+    return NextResponse.json([], { status: 400 });
+  }
 
   const countryId = 21;
   const geoRegionId = 1;
@@ -38,15 +98,6 @@ export async function GET(
       `Subscriber/GetFullSiteDetails?countryId=${countryId}&geoRegionLevel=${geoRegionLevel}&geoRegionId=${geoRegionId}`
     )
   ).data;
-
-  if (!lat || !lng) {
-    return NextResponse.json([], { status: 400 });
-  }
-
-  const currentLocation = {
-    lat: Number.parseFloat(lat),
-    lng: Number.parseFloat(lng)
-  };
 
   const geoData = sites.S.map((site: any) => {
     return [site.Lat, site.Lng, site.S, site.N, site.A, site.P];
