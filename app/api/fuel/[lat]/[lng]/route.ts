@@ -41,7 +41,7 @@ export async function GET(
     const { stations, prices } = await getNswFuelNearby(
       currentLocation.lat,
       currentLocation.lng,
-      15,
+      250,
       fuelType.nswCode
     );
 
