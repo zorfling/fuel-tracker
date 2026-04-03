@@ -38,12 +38,26 @@ export async function GET(
       return NextResponse.json([], { status: 400 });
     }
 
-    const { stations, prices } = await getNswFuelNearby(
+    let { stations, prices } = await getNswFuelNearby(
       currentLocation.lat,
       currentLocation.lng,
       250,
       fuelType.nswCode
     );
+
+    // Fallback: if U91 returns very few results, try E10 (NSW standard unleaded)
+    if (prices.length <= 1 && fuelType.nswCode === 'U91') {
+      const fallback = await getNswFuelNearby(
+        currentLocation.lat,
+        currentLocation.lng,
+        250,
+        'E10'
+      );
+      if (fallback.prices.length > prices.length) {
+        stations = fallback.stations;
+        prices = fallback.prices;
+      }
+    }
 
     const stationsByCode = new Map(stations.map(station => [station.code, station]));
     const entries: FuelEntry[] = prices
