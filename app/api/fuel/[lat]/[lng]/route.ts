@@ -45,17 +45,28 @@ export async function GET(
       fuelType.nswCode
     );
 
-    // Fallback: if U91 returns very few results, try E10 (NSW standard unleaded)
-    if (prices.length <= 1 && fuelType.nswCode === 'U91') {
+    // Fallback: if U91 returns very few results, also fetch E10 and merge
+    if (fuelType.nswCode === 'U91') {
       const fallback = await getNswFuelNearby(
         currentLocation.lat,
         currentLocation.lng,
         250,
         'E10'
       );
-      if (fallback.prices.length > prices.length) {
-        stations = fallback.stations;
-        prices = fallback.prices;
+      // Merge, avoiding duplicate station codes
+      const existingCodes = new Set(prices.map(p => p.stationcode));
+      for (const p of fallback.prices) {
+        if (!existingCodes.has(p.stationcode)) {
+          prices.push(p);
+          existingCodes.add(p.stationcode);
+        }
+      }
+      const existingStationCodes = new Set(stations.map(s => s.code));
+      for (const s of fallback.stations) {
+        if (!existingStationCodes.has(s.code)) {
+          stations.push(s);
+          existingStationCodes.add(s.code);
+        }
       }
     }
 
