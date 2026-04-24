@@ -62,7 +62,10 @@ export async function GET(request: Request) {
 
     await prisma.priceAlert.update({
       where: { id: alert.id },
-      data: { lastTriggered: now },
+      data: {
+        lastTriggered: now,
+        threshold: snapshot.cheapest,  // Reset to current price — only trigger again if it drops further
+      },
     });
 
     triggered.push({
@@ -80,7 +83,7 @@ export async function GET(request: Request) {
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (botToken && chatId) {
       const lines = triggered.map(
-        (t) => `⛽ ${t.fuelTypeName} at ${t.locationName} dropped to ${t.currentPrice.toFixed(1)}¢ (your target: ${t.threshold}¢)`
+        (t) => `⛽ ${t.fuelTypeName} at ${t.locationName} dropped to ${t.currentPrice.toFixed(1)}¢ (was ${t.threshold}¢). Alert reset to ${t.currentPrice.toFixed(1)}¢`
       );
       const message = `🔔 Fuel Price Alert!\n\n${lines.join('\n')}`;
       try {
