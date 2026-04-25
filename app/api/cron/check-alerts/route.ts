@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       where: { id: alert.id },
       data: {
         lastTriggered: now,
-        threshold: snapshot.cheapest - 1,  // Set 1¢ below current — only trigger if it drops further
+        threshold: snapshot.cheapest - 0.1,  // Set 0.1¢ below current — only trigger if it drops further
       },
     });
 
